@@ -3,6 +3,5 @@
 *.pyc
 *CMakeLists.txt.user
 build/
-python/model
 corpus
 dataset

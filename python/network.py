@@ -17,7 +17,7 @@ test_start_batch = 24000
 test_end_batch = 24500
 
 def train_network():
-    with tf.device("/device:GPU:0"):
+    with tf.device("/device:CPU:0"):
         # input labels
         clean_tokens = tf.placeholder(tf.int32, [None, message_size], name='clean_tokens')                                        
         clean_one_hot_embedding = tf.one_hot(clean_tokens, NUM_SYMBOLS)                                            

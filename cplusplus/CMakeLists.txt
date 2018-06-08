@@ -11,7 +11,8 @@ else ()
     SET(CMAKE_CXX_FLAGS "-O0 -g ${COMMON_CXX_FLAGS}")
 endif ()
 
-add_library(prefix-tree SHARED prefix-tree.cpp)
+add_library(typos-corrector-helper SHARED prefix-tree.cpp utils.cpp contaminator.cpp dictionary.cpp random-batch-generator.cpp prefix-tree-builder.cpp)
+target_link_libraries(typos-corrector-helper boost_filesystem boost_system boost_program_options)
 
-add_executable(prepare-dataset dataset-preparer.cpp)
-target_link_libraries(prepare-dataset boost_filesystem boost_system boost_program_options prefix-tree)
+add_executable(typos-corrector-helper-app main.cpp)
+target_link_libraries(typos-corrector-helper-app typos-corrector-helper)

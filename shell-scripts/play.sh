@@ -1,5 +1,5 @@
 #!/bin/bash
 
 pushd ../python
-python network.py -c play
+/opt/anaconda2/bin/python network.py -c play
 popd

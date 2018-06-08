@@ -101,7 +101,7 @@ def train_network():
 
 def play(prefix_tree_file):
     with tf.Session() as sess:
-        saver = tf.train.import_meta_graph(model_file + '.meta')
+        saver = tf.train.import_meta_graph(model_file + '.meta', clear_devices=True)
         saver.restore(sess, tf.train.latest_checkpoint(os.path.dirname(model_file + '.meta')))
         graph = tf.get_default_graph()
 

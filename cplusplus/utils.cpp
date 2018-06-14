@@ -4,6 +4,7 @@
 
 const int32_t A_INT = static_cast<int32_t>('a');
 const int32_t Z_INT = static_cast<int32_t>('z');
+const size_t NUM_LETTERS = Z_INT - A_INT + 2;
 
 bool acceptable(char ch) {
     return ch == ' ' || ('a' <= ch && ch <= 'z');

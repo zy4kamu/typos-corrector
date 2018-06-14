@@ -1,180 +1,206 @@
 #include "prefix-tree.h"
-
-#include <boost/make_unique.hpp>
-#include <cstring>
-#include <fstream>
-#include <string>
-
 #include "utils.h"
 
-/***** Helper functions *****/
+#include <cstring>
+#include <boost/make_unique.hpp>
+#include <fstream>
+#include <iostream>
+#include <set>
+#include <unordered_map>
 
 namespace {
 
-template <class T>
-void read_binary(std::ifstream& reader, T& item) {
-    reader.read((char*)&item, sizeof(T));
+class DecompressedPrefixTree {
+private:
+    struct Node {
+        std::unordered_map<char, std::unique_ptr<Node>> transitions;
+
+        String to_string() const {
+            if (transitions.empty()) {
+                return String(1, 0);
+            } else if (transitions.size() == 1) {
+                unsigned char letter = static_cast<unsigned char>(transitions.begin()->first);
+                return letter + transitions.begin()->second->to_string();
+            } else {
+                std::vector<unsigned char> chars;
+                std::vector<String> subtrees;
+                for (const auto& item : transitions) {
+                    chars.push_back(item.first);
+                    subtrees.push_back(item.second->to_string());
+                }
+                String result;
+                uint32_t offset = 4 * chars.size() + 1;
+                for (size_t i = 0; i < chars.size(); ++i) {
+                    result.push_back(128 + chars[i]);
+                    result.push_back(offset / (256 * 256));
+                    result.push_back((offset % (256 * 256)) / 256);
+                    result.push_back(offset % 256 );
+                    offset += subtrees[i].size() - 4;
+                }
+                result.push_back(0);
+                for (size_t i = 0; i < chars.size(); ++i) {
+                    result += subtrees[i];
+                }
+                return result;
+            }
+        }
+    };
+public:
+    DecompressedPrefixTree(): root(boost::make_unique<Node>()) {
+    }
+
+    void add(const std::string& token) {
+        Node* node = root.get();
+        for (size_t i = 0; i < token.length(); ++i) {
+            char letter = token[i];
+            std::unique_ptr<Node>& node_ptr = node->transitions[letter];
+            if (!node_ptr) {
+                node_ptr = boost::make_unique<Node>();
+            }
+            node = node_ptr.get();
+        }
+    }
+
+    String to_string() const {
+        return root->to_string();
+    }
+
+    std::unique_ptr<Node> root;
+};
+
+size_t get_file_size(const std::string& input_file) {
+    std::ifstream reader(input_file, std::ifstream::ate | std::ifstream::binary);
+    return reader.tellg();
 }
 
-template <class T>
-void write_binary(std::ofstream& writer, const T& item) {
-    writer.write((char*)&item, sizeof(T));
+struct ViterbiState {
+    std::string prefix;
+    size_t offset;
+    double logit;
+    bool terminated = false;
+
+    bool operator <(const ViterbiState& other) const {
+        return (logit < other.logit) || (logit == other.logit && offset < other.offset);
+    }
+
+    bool operator ==(const ViterbiState& other) const {
+        return offset == other.offset;
+    }
+};
+
+bool pre_insert(size_t step, std::set<ViterbiState>& states, double logit, size_t num_hypos) {
+    if (states.size() < num_hypos) {
+        return true;
+    } else if (logit < states.begin()->logit) {
+        return false;
+    } else {
+        states.erase(states.begin());
+        return true;
+    }
 }
 
-} // anonymous namespace
+} // unonymous namespace
 
-/***** Implementation *****/
-
-PrefixTree::PrefixTree(): root(boost::make_unique<Node>())
-                        , generator(1) {
+void PrefixTree::Create(const std::string& input_file, const std::string& output_file) {
+    DecompressedPrefixTree decompressed_tree;
+    std::ifstream reader(input_file);
+    std::string token;
+    while (getline(reader, token)) {
+        decompressed_tree.add(token);
+    }
+    String tree_string = decompressed_tree.to_string();
+    std::ofstream writer(output_file, std::ofstream::binary);
+    writer.write((const char*)tree_string.c_str(), tree_string.size());
+    writer.close();
 }
 
-PrefixTree::PrefixTree(const std::string& input_file): generator(1) {
-    std::ifstream reader(input_file, std::ios::binary);
-    root = read_node(reader);
+PrefixTree::PrefixTree(const std::string& input_file) {
+    std::ifstream reader(input_file, std::ifstream::binary);
+    size_t size = get_file_size(input_file);
+    content.resize(size);
+    reader.read(const_cast<char*>((char*)content.c_str()), size);
 }
 
 size_t PrefixTree::match(const std::string& token) const {
-    return match(token.data(), token.size());
-}
-
-size_t PrefixTree::match(const char* token) const {
-    return strlen(token);
-}
-
-size_t PrefixTree::match(const char* token, size_t length) const {
-    const PrefixTree::Node* node = root.get();
-    for (size_t i = 0; i < length; ++i) {
-        auto found = node->transitions.find(token[i]);
-        if (found == node->transitions.end()) {
-            return i;
-        }
-        node = found->second.get();
-    }
-    return length;
-}
-
-void PrefixTree::add(const std::string& token) {
-    add(token.c_str(), token.length());
-}
-
-void PrefixTree::add(const char* token, size_t length) {
-    Node* node = root.get();
-    for (size_t i = 0; i < length + 1; ++i) {
-        char letter = i < length ? token[i] : '$';
-        std::unique_ptr<Node>& node_ptr = node->transitions[letter];
-        if (!node_ptr) {
-            node_ptr = boost::make_unique<PrefixTree::Node>();
-        }
-        node = node_ptr.get();
-    }
-}
-
-void PrefixTree::save(const std::string& output_file) const {
-    std::ofstream writer(output_file, std::ios::binary);
-    write_node(writer, *root);
-}
-
-std::string PrefixTree::generate() const {
-    const PrefixTree::Node* node = root.get();
-    std::string token;
-    char current_char = '\0';
-    while (true) {
-        size_t num_transitions = node->transitions.size();
-        std::uniform_int_distribution<size_t> distribution(0, num_transitions - 1);
-        auto iter = node->transitions.begin();
-        std::advance(iter, distribution(generator));
-        current_char = iter->first;
-        node = iter->second.get();
-        if (current_char != '$') {
-            token += current_char;
+    const unsigned char* pointer = content.data();
+    const unsigned char* end_of_content = content.data() + content.size();
+    size_t num_coincided = 0;
+    while (num_coincided < token.length() && pointer < end_of_content) {
+        const unsigned char content_letter = *pointer;
+        const unsigned char token_letter = token[num_coincided];
+        if (content_letter == 0) {
+            return num_coincided;
+        } else if (content_letter < 128) {
+            if (token_letter == content_letter) {
+                ++num_coincided;
+                ++pointer;
+            } else {
+                return num_coincided;
+            }
+        } else if (token_letter + 128 == content_letter) {
+            ++num_coincided;
+            pointer += 256 * 256 * pointer[1] + 256 * pointer[2] + pointer[3];
         } else {
-            break;
+            pointer += 4;
         }
     }
-    return token;
+    return num_coincided;
 }
 
-std::unique_ptr<PrefixTree::Node> PrefixTree::read_node(std::ifstream& reader) const {
-     std::unique_ptr<PrefixTree::Node> node = boost::make_unique<PrefixTree::Node>();
-     size_t num_transitions = 0;
-     read_binary(reader, num_transitions);
-     for (size_t i = 0; i < num_transitions; ++i) {
-         char letter;
-         read_binary(reader, letter);
-         node->transitions[letter] = read_node(reader);
-     }
-     return node;
-}
-
-void PrefixTree::write_node(std::ofstream& writer, const PrefixTree::Node& node) const {
-    write_binary(writer, node.transitions.size());
-    for (const auto& item : node.transitions) {
-        write_binary(writer, item.first);
-        write_node(writer, *item.second);
-    }
-}
-
-/*
-std::vector<std::pair<float, std::string>> PrefixTree::viterbi(const std::vector<std::vector<float>>& probailities,
-                                                               size_t num_hypos) const {
-    size_t grid_length = probailities.size();
-    size_t num_choices = probailities[0].size();
-
-    // initialize first layer
-    std::vector<std::multimap<float, PrefixTree::Node*>> grid(num_choices);
-    for (size_t i = 0; i < num_choices; ++i) {
-        auto found = root->transitions.find(to_char(i));
-        if (found != root->transitions.end()) {
-            grid[i] = { probailities[0][i], found->second.get() };
-        }
-    }
-
-    // run over grid
-    for (size_t time = 1; time < grid_length; ++time) {
-        std::vector<std::multimap<float, PrefixTree::Node*>> updated_grid(num_choices);
-        for (const std::multimap<float, PrefixTree::Node*>& item : grid) {
-            for (const auto& kvp : item) {
-                float current_probability = kvp.first;
-                const std::unordered_map<char, std::unique_ptr<Node>>& transitions = item.second->transitions;
-                for (const auto& kvp2 : transitions) {
-                    char next_char = kvp2.first;
-                    PrefixTree::Node* next_node = kvp2.second.get();
-                    updated_grid[next_char] = { current_probability + probailities[time][to_int(next_char)], next_node };
+void PrefixTree::viterbi(const double* logits, size_t length, size_t num_hypos, std::vector<std::string>& output_tokens,
+                         std::vector<double>& output_logits) const {
+    std::set<ViterbiState> states;
+    states.insert({ "", 0, 0, false });
+    for (size_t step = 0; step < length; ++step) {
+        std::set<ViterbiState> updated_states;
+        for (const ViterbiState& state : states) {
+            // fall from any state to terminate state
+            double space_logit = state.logit + logits[NUM_LETTERS * step + to_int(' ')];
+            if (pre_insert(step, updated_states, space_logit, num_hypos)) {
+                updated_states.insert({ state.prefix, state.offset, space_logit, true });
+            }
+            unsigned char current_letter = content[state.offset];
+            if (state.terminated || current_letter == 0) {
+                continue;
+            }
+            // fall from non-terminate state to 1 child state
+            if (current_letter < 128) {
+                double updated_logit = state.logit + logits[NUM_LETTERS * step + to_int(current_letter)];
+                if (pre_insert(step, updated_states, updated_logit, num_hypos)) {
+                    updated_states.insert({ state.prefix + static_cast<char>(current_letter), state.offset + 1, updated_logit, false });
                 }
-                updated_grid[next_char] = { current_probability + probailities[time][to_int(' ')], item.second.get() };
+            // fall from non-terminate state to many children state
+            } else {
+                ViterbiState transition_state = state;
+                while (current_letter != 0) {
+                    current_letter -= 128;
+                    const unsigned char* pointer = content.data() + transition_state.offset;
+                    double updated_logit = transition_state.logit + logits[NUM_LETTERS * step + to_int(current_letter)];
+                    if (pre_insert(step, updated_states, updated_logit, num_hypos)) {
+                        updated_states.insert({ transition_state.prefix + static_cast<char>(current_letter),
+                                               transition_state.offset + 256 * 256 * pointer[1] + 256 * pointer[2] + pointer[3],
+                                               updated_logit, false });
+                    }
+                    transition_state.offset += 4;
+                    current_letter = content[transition_state.offset];
+                }
             }
         }
-        for (std::map<float, PrefixTree::Node*>& item : updated_grid) {
-            while (item.size() > num_hypos) {
-                item.erase(item.begin());
-            }
-        }
-        grid = std::move(updated_grid);
+        states = std::move(updated_states);
     }
-
-    // fill result nodes
-    std::multimap<float, PrefixTree::Node*> node_results;
-    for (const std::multimap<float, PrefixTree::Node*>& item : grid) {
-        node_results.insert(item);
+    output_tokens.reserve(states.size());
+    output_logits.reserve(states.size());
+    for (auto iter = states.rbegin(); iter != states.rend(); ++iter) {
+        output_tokens.emplace_back(std::move(iter->prefix));
+        output_logits.push_back(iter->logit);
     }
-    while (node_results.size() > num_hypos) {
-        node_results.erase(node_results.begin());
-    }
-
-    std::vector<std::pair<float, std::string>>
 }
-*/
 
 /********* Python bidings *********/
 
 extern "C" {
 
 std::unique_ptr<PrefixTree> prefix_tree;
-
-void create() {
-    prefix_tree = boost::make_unique<PrefixTree>();
-}
 
 void create_from_file(const char* file_name, size_t size) {
     prefix_tree = boost::make_unique<PrefixTree>(std::string(file_name, size));
@@ -185,16 +211,21 @@ void destroy() {
 }
 
 size_t match(const char* token, size_t length) {
-    return prefix_tree->match(token, length);
+    return prefix_tree->match(std::string(token, length));
 }
 
-void add(const char* token, size_t length) {
-    prefix_tree->add(token, length);
-}
-
-void generate(char* token) {
-    std::string generated = prefix_tree->generate();
-    std::memcpy(token, generated.c_str(), generated.size());
+void viterbi(const double* logits, size_t length, size_t num_hypos, char* output, double* predictions) {
+    std::vector<std::string> result_tokens;
+    std::vector<double> result_logits;
+    prefix_tree->viterbi(logits, length, num_hypos, result_tokens, result_logits);
+    std::string concatenated_output;
+    for (const std::string& token : result_tokens) {
+        concatenated_output += token + "$";
+    }
+    if (concatenated_output.length() > 0) {
+        std::memcpy(output, concatenated_output.c_str(), concatenated_output.length() - 1);
+    }
+    std::memcpy(predictions, result_logits.data(), sizeof(double) * result_logits.size());
 }
 
 } // extern "C"

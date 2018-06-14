@@ -1,5 +1,5 @@
 #!/bin/bash
 
 pushd ../build
-./typos-corrector-helper-app -c prefix-tree -d ../python/model/dictionary --prefix-tree-file ../python/model/prefix-tree
+./prepare-dataset-app -c prefix-tree -t ../corpus --prefix-tree-file ../python/model/prefix-tree
 popd

@@ -27,9 +27,11 @@ std::string Contaminator::replace_random_char(const std::string& token) {
 }
 
 std::string Contaminator::add_random_char(const std::string& token) {
-    std::uniform_int_distribution<size_t> char_distribution(A_INT, Z_INT);
+    std::uniform_int_distribution<size_t> char_distribution(A_INT, Z_INT + 1);
     char letter = char_distribution(generator);
-
+    if (static_cast<int32_t>(letter) == Z_INT + 1) {
+        letter = ' ';
+    }
     std::uniform_int_distribution<size_t> distribution(0, token.size());
     size_t index = distribution(generator);
     return token.substr(0, index) + letter + token.substr(index);

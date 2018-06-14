@@ -13,7 +13,8 @@ struct RandomBatchGenerator: private Contaminator {
 private:
     std::vector<std::string> tokens;
     std::vector<size_t> weights;
-    std::discrete_distribution<size_t> distribution;
+    std::discrete_distribution<size_t> token_distribution;
+    std::uniform_int_distribution<size_t> prefix_distribution;
     std::mt19937 generator;
 };
 

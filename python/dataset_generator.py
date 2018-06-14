@@ -2,7 +2,7 @@ import argparse, ctypes, os, sys
 import numpy as np
 from convertions import numpy_to_string
 
-library = ctypes.cdll.LoadLibrary('../build/libtypos-corrector-helper.so')
+library = ctypes.cdll.LoadLibrary('../build/libbatch-generator.so')
 
 class DataSetGenerator(object): 
     def __init__(self, dictionary_file, message_size, mistake_probability):

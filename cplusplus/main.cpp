@@ -7,5 +7,5 @@
 int main(int argc, char* argv[]) {
     const std::string input_file = argv[1];
     const std::string output_file = argv[2];
-    PrefixTree::Create(input_file, output_file);
+    PrefixTree::create(input_file, output_file);
 }

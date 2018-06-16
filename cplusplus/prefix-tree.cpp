@@ -1,6 +1,7 @@
 #include "prefix-tree.h"
 #include "utils.h"
 
+#include <cassert>
 #include <cstring>
 #include <boost/make_unique.hpp>
 #include <fstream>
@@ -101,7 +102,9 @@ bool pre_insert(size_t step, std::set<ViterbiState>& states, double logit, size_
 
 } // unonymous namespace
 
-void PrefixTree::Create(const std::string& input_file, const std::string& output_file) {
+/****** PrefixTree *******/
+
+void PrefixTree::create(const std::string& input_file, const std::string& output_file) {
     DecompressedPrefixTree decompressed_tree;
     std::ifstream reader(input_file);
     std::string token;
@@ -145,6 +148,10 @@ size_t PrefixTree::match(const std::string& token) const {
         }
     }
     return num_coincided;
+}
+
+const unsigned char* PrefixTree::get_root() const {
+    return content.data();
 }
 
 void PrefixTree::viterbi(const double* logits, size_t length, size_t num_hypos, std::vector<std::string>& output_tokens,
@@ -196,9 +203,53 @@ void PrefixTree::viterbi(const double* logits, size_t length, size_t num_hypos, 
     }
 }
 
+
+/********* PrefixTreeAutomata ***********/
+
+PrefixTreeAutomata::PrefixTreeAutomata(const PrefixTree& tree): state(tree.get_root()) {
+}
+
+size_t PrefixTreeAutomata::get_transitions(unsigned char* output) const {
+    if (state == nullptr || *state == 0) {
+        return 0;
+    }
+    if (*state < 128) {
+        output[0] = *state;
+        return 1;
+    }
+    size_t num_transitions = 0;
+    const unsigned char* pointer = state;
+    while (*pointer != 0) {
+        output[num_transitions++] = *pointer - 128;
+        pointer += 4;
+    }
+    return num_transitions;
+}
+
+void PrefixTreeAutomata::make_transition(unsigned char transition) {
+    if (state == nullptr || *state == 0) {
+        return;
+    }
+    if (*state < 128) {
+        assert(*state == transition);
+        ++state;
+        return;
+    }
+    while (*state != 0) {
+        if (*state == 128 + transition) {
+            state += 256 * 256 * state[1] + 256 * state[2] + state[3];
+            return;
+        }
+        state += 4;
+    }
+    assert(false);
+}
+
 /********* Python bidings *********/
 
 extern "C" {
+
+/*** PrefixTree ***/
 
 std::unique_ptr<PrefixTree> prefix_tree;
 
@@ -227,5 +278,26 @@ void viterbi(const double* logits, size_t length, size_t num_hypos, char* output
     }
     std::memcpy(predictions, result_logits.data(), sizeof(double) * result_logits.size());
 }
+
+/*** Prefix tree automata ***/
+
+void* create_automata() {
+    return new PrefixTreeAutomata(*prefix_tree);
+}
+
+void destroy_automata(void* automata) {
+    delete (PrefixTreeAutomata*)automata;
+}
+
+size_t get_transitions(void* automata, unsigned char* output) {
+    PrefixTreeAutomata& autom = *((PrefixTreeAutomata*)automata);
+    return autom.get_transitions(output);
+}
+
+void make_transition(void* automata, unsigned char transition) {
+    PrefixTreeAutomata& autom = *((PrefixTreeAutomata*)automata);
+    return autom.make_transition(transition);
+}
+
 
 } // extern "C"

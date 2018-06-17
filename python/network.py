@@ -2,7 +2,7 @@ import argparse, os
 import time
 import tensorflow as tf
 import numpy as np
-from convertions import NUM_SYMBOLS, string_to_numpy, SPACE_INT, numpy_to_string, int_to_char
+from convertions import NUM_SYMBOLS, string_to_numpy, SPACE_INT, numpy_to_string, int_to_char, char_to_int
 from dataset_generator import DataSetGenerator
 from prefix_tree import PrefixTree
 
@@ -161,40 +161,57 @@ def train_network():
                 """
                 print ''
 
+class AutomataState(object):
+    def __init__(self, lstm_c, lstm_h, logits):
+        self.lstm_c = lstm_c
+        self.lstm_h = lstm_h
+        self.logits = logits
+
+class AutomataSession(object):
+    def __init__(self):
+        self.sess = tf.Session()
+        saver = tf.train.import_meta_graph(model_file + '.meta', clear_devices=True)
+        saver.restore(self.sess, tf.train.latest_checkpoint(os.path.dirname(model_file + '.meta')))
+        self.graph = tf.get_default_graph()
+        self.contaminated_tokens = self.graph.get_tensor_by_name("contaminated_tokens:0")
+        self.initial_play_state_c = self.graph.get_tensor_by_name('initial_play_state_c:0')
+        self.initial_play_state_h = self.graph.get_tensor_by_name('initial_play_state_h:0')
+        self.initial_logits = self.graph.get_tensor_by_name('initial_logits:0')
+        self.apply_output_logits = self.graph.get_tensor_by_name('after_apply_logits:0')
+        self.apply_output_state_c = self.graph.get_tensor_by_name('after_apply_state_c:0')
+        self.apply_output_state_h = self.graph.get_tensor_by_name('after_apply_state_h:0')
+        self.apply_input_state_c = self.graph.get_tensor_by_name('apply_input_state_c:0')
+        self.apply_input_state_h = self.graph.get_tensor_by_name('apply_input_state_h:0')
+        self.apply_input_char = self.graph.get_tensor_by_name('apply_input_char:0')
+
+    def feed_token(self, token):
+        numpy_token = np.ones(message_size, dtype=np.int32) * SPACE_INT
+        numpy_token[0:len(token)] = string_to_numpy(token)
+        numpy_token = numpy_token.reshape((-1, message_size))
+        lstm_c, lstm_h, first_char_logits = self.sess.run(
+            [self.initial_play_state_c, self.initial_play_state_h, self.initial_logits],
+            feed_dict={self.contaminated_tokens:numpy_token})
+        return AutomataState(lstm_c, lstm_h, first_char_logits)
+
+    def apply(self, state, ch):
+        char = np.empty(dtype=np.int32, shape=(1,))
+        char[0] = char_to_int(ch)
+        lstm_c, lstm_h, next_char_logits = self.sess.run(
+            [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
+            feed_dict={self.apply_input_state_c:state.lstm_c, self.apply_input_state_h:state.lstm_h, self.apply_input_char:char})
+        return AutomataState(lstm_c, lstm_h, next_char_logits)
 
 def play():
-    with tf.Session() as sess:
-        saver = tf.train.import_meta_graph(model_file + '.meta', clear_devices=True)
-        saver.restore(sess, tf.train.latest_checkpoint(os.path.dirname(model_file + '.meta')))
-        graph = tf.get_default_graph()
-
-        contaminated_tokens = graph.get_tensor_by_name("contaminated_tokens:0")
-        initial_play_state_c = graph.get_tensor_by_name('initial_play_state_c:0')
-        initial_play_state_h = graph.get_tensor_by_name('initial_play_state_h:0')
-        initial_logits = graph.get_tensor_by_name('initial_logits:0')
-        apply_output_logits = graph.get_tensor_by_name('after_apply_logits:0')
-        apply_output_state_c = graph.get_tensor_by_name('after_apply_state_c:0')
-        apply_output_state_h = graph.get_tensor_by_name('after_apply_state_h:0')
-
-        apply_input_state_c = graph.get_tensor_by_name('apply_input_state_c:0')
-        apply_input_state_h = graph.get_tensor_by_name('apply_input_state_h:0')
-        apply_input_char = graph.get_tensor_by_name('apply_input_char:0')
-
-        while True:
-            token = raw_input("Input something: ")
-            numpy_token = np.ones(message_size, dtype=np.int32) * SPACE_INT
-            numpy_token[0:len(token)] = string_to_numpy(token)
-            numpy_token = numpy_token.reshape((-1, message_size))
-            c, h, l = sess.run([initial_play_state_c, initial_play_state_h, initial_logits],
-                               feed_dict={contaminated_tokens:numpy_token})
-            best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
-            for i in range(message_size):
-                best_predicted[i] = np.argmax(l)
-                char = np.empty(dtype=np.int32, shape=(1,))
-                char[0] = numpy_token[0, i]
-                c, h, l = sess.run([apply_output_state_c, apply_output_state_h, apply_output_logits],
-                                   feed_dict={apply_input_state_c:c, apply_input_state_h:h, apply_input_char: char})
-            print numpy_to_string(best_predicted)
+    sess = AutomataSession()
+    while True:
+        token = raw_input("Input something: ")
+        token += ' ' * (message_size - len(token))
+        best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
+        state = sess.feed_token(token)
+        for i in range(message_size):
+            best_predicted[i] = np.argmax(state.logits)
+            state = sess.apply(state, token[i])
+        print numpy_to_string(best_predicted)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')

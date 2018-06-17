@@ -203,48 +203,6 @@ void PrefixTree::viterbi(const double* logits, size_t length, size_t num_hypos, 
     }
 }
 
-
-/********* PrefixTreeAutomata ***********/
-
-PrefixTreeAutomata::PrefixTreeAutomata(const PrefixTree& tree): state(tree.get_root()) {
-}
-
-size_t PrefixTreeAutomata::get_transitions(unsigned char* output) const {
-    if (state == nullptr || *state == 0) {
-        return 0;
-    }
-    if (*state < 128) {
-        output[0] = *state;
-        return 1;
-    }
-    size_t num_transitions = 0;
-    const unsigned char* pointer = state;
-    while (*pointer != 0) {
-        output[num_transitions++] = *pointer - 128;
-        pointer += 4;
-    }
-    return num_transitions;
-}
-
-void PrefixTreeAutomata::make_transition(unsigned char transition) {
-    if (state == nullptr || *state == 0) {
-        return;
-    }
-    if (*state < 128) {
-        assert(*state == transition);
-        ++state;
-        return;
-    }
-    while (*state != 0) {
-        if (*state == 128 + transition) {
-            state += 256 * 256 * state[1] + 256 * state[2] + state[3];
-            return;
-        }
-        state += 4;
-    }
-    assert(false);
-}
-
 /********* Python bidings *********/
 
 extern "C" {
@@ -281,23 +239,43 @@ void viterbi(const double* logits, size_t length, size_t num_hypos, char* output
 
 /*** Prefix tree automata ***/
 
-void* create_automata() {
-    return new PrefixTreeAutomata(*prefix_tree);
+const unsigned char* create_automata() {
+    return prefix_tree->get_root();
 }
 
-void destroy_automata(void* automata) {
-    delete (PrefixTreeAutomata*)automata;
+size_t get_transitions(const unsigned char* state, unsigned char* output) {
+    if (state == nullptr || *state == 0) {
+        return 0;
+    }
+    if (*state < 128) {
+        output[0] = *state;
+        return 1;
+    }
+    size_t num_transitions = 0;
+    const unsigned char* pointer = state;
+    while (*pointer != 0) {
+        output[num_transitions++] = *pointer - 128;
+        pointer += 4;
+    }
+    return num_transitions;
 }
 
-size_t get_transitions(void* automata, unsigned char* output) {
-    PrefixTreeAutomata& autom = *((PrefixTreeAutomata*)automata);
-    return autom.get_transitions(output);
+const unsigned char* make_transition(const unsigned char* state, unsigned char transition) {
+    if (state == nullptr || *state == 0) {
+        return state;
+    }
+    if (*state < 128) {
+        assert(*state == transition);
+        return state + 1;
+    }
+    while (*state != 0) {
+        if (*state == 128 + transition) {
+            return state + 256 * 256 * state[1] + 256 * state[2] + state[3];
+        }
+        state += 4;
+    }
+    assert(false);
+    return state;
 }
-
-void make_transition(void* automata, unsigned char transition) {
-    PrefixTreeAutomata& autom = *((PrefixTreeAutomata*)automata);
-    return autom.make_transition(transition);
-}
-
 
 } // extern "C"

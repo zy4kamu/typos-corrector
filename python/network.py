@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 from convertions import NUM_SYMBOLS, string_to_numpy, SPACE_INT, numpy_to_string, int_to_char, char_to_int
 from dataset_generator import DataSetGenerator
-from prefix_tree import PrefixTree
+from prefix_tree import PrefixTree, get_prefix_tree_root, get_transitions, make_transition
 
 command      = None
 input_folder = None
@@ -12,6 +12,7 @@ message_size = None
 batch_size   = None
 model_file   = None
 prefix_tree  = None
+prefix_tree_automata = None
 num_hypos    = 1000
 test_num_iterations = 2500
 test_batch_size = 10000
@@ -162,12 +163,16 @@ def train_network():
                 print ''
 
 class AutomataState(object):
-    def __init__(self, lstm_c, lstm_h, logits, full_prefix_logits=0, prefix=''):
+    def __init__(self, lstm_c, lstm_h, logits, prefix_state, full_prefix_logits=0, prefix=''):
         self.lstm_c = lstm_c
         self.lstm_h = lstm_h
         self.logits = logits
+        self.prefix_state = prefix_state
         self.full_log_probability = full_prefix_logits
         self.prefix = prefix
+
+    def get_transitions(self):
+        return get_transitions(self.prefix_state)
 
 class AutomataSession(object):
     def __init__(self):
@@ -193,7 +198,7 @@ class AutomataSession(object):
         lstm_c, lstm_h, first_char_logits = self.sess.run(
             [self.initial_play_state_c, self.initial_play_state_h, self.initial_logits],
             feed_dict={self.contaminated_tokens:numpy_token})
-        return AutomataState(lstm_c, lstm_h, first_char_logits)
+        return AutomataState(lstm_c, lstm_h, first_char_logits, get_prefix_tree_root())
 
     def apply(self, state, ch):
         char = np.empty(dtype=np.int32, shape=(1,))
@@ -201,14 +206,35 @@ class AutomataSession(object):
         lstm_c, lstm_h, next_char_logits = self.sess.run(
             [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
             feed_dict={self.apply_input_state_c:state.lstm_c, self.apply_input_state_h:state.lstm_h, self.apply_input_char:char})
-        return AutomataState(lstm_c, lstm_h, next_char_logits, state.full_log_probability + state.logits[0, char[0]], state.prefix + ch)
+        return AutomataState(lstm_c, lstm_h, next_char_logits,
+                             make_transition(state.prefix_state, ch),
+                             state.full_log_probability + state.logits[0, char[0]], state.prefix + ch)
+
+    def find_best_hypos(self, token, num_hypos=100):
+        token += ' ' * (message_size - len(token))
+        current_states = [self.feed_token(token)]
+        for i in range(message_size):
+            next_states = []
+            for state in current_states:
+                transitions = get_transitions(state.prefix_state)
+                if len(transitions) > 0:
+                    for ch in transitions:
+                        next_states.append(self.apply(state, ch))
+                else:
+                    next_states.append(self.apply(state, ' '))
+            current_states = sorted(next_states, key=lambda x: -x.full_log_probability)
+            if len(current_states) > num_hypos:
+                current_states = current_states[0:num_hypos]
+        for state in current_states:
+            print state.prefix, state.full_log_probability
 
 def play():
     sess = AutomataSession()
     while True:
         token = raw_input("Input something: ")
-        token += ' ' * (message_size - len(token))
+        sess.find_best_hypos(token)
 
+        """
         # feed the same token
         best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
         state = sess.feed_token(token)
@@ -233,6 +259,7 @@ def play():
             best_predicted[i] = np.argmax(state.logits)
             state = sess.apply(state, 'a')
         print numpy_to_string(best_predicted), state.full_log_probability
+        """
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')

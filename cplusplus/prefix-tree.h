@@ -15,12 +15,3 @@ public:
 private:
     String content;
 };
-
-class PrefixTreeAutomata {
-public:
-    PrefixTreeAutomata(const PrefixTree& tree);
-    size_t get_transitions(unsigned char* output) const;
-    void make_transition(unsigned char transition);
-private:
-    const unsigned char* state;
-};

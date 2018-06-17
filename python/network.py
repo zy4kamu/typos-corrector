@@ -162,10 +162,12 @@ def train_network():
                 print ''
 
 class AutomataState(object):
-    def __init__(self, lstm_c, lstm_h, logits):
+    def __init__(self, lstm_c, lstm_h, logits, full_prefix_logits=0, prefix=''):
         self.lstm_c = lstm_c
         self.lstm_h = lstm_h
         self.logits = logits
+        self.full_log_probability = full_prefix_logits
+        self.prefix = prefix
 
 class AutomataSession(object):
     def __init__(self):
@@ -199,19 +201,38 @@ class AutomataSession(object):
         lstm_c, lstm_h, next_char_logits = self.sess.run(
             [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
             feed_dict={self.apply_input_state_c:state.lstm_c, self.apply_input_state_h:state.lstm_h, self.apply_input_char:char})
-        return AutomataState(lstm_c, lstm_h, next_char_logits)
+        return AutomataState(lstm_c, lstm_h, next_char_logits, state.full_log_probability + state.logits[0, char[0]], state.prefix + ch)
 
 def play():
     sess = AutomataSession()
     while True:
         token = raw_input("Input something: ")
         token += ' ' * (message_size - len(token))
+
+        # feed the same token
         best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
         state = sess.feed_token(token)
         for i in range(message_size):
             best_predicted[i] = np.argmax(state.logits)
             state = sess.apply(state, token[i])
-        print numpy_to_string(best_predicted)
+        print numpy_to_string(best_predicted), state.full_log_probability
+
+        # feed slightly contaminated
+        best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
+        state = sess.feed_token(token)
+        contaminated_token = ('z' + token)[0:message_size]
+        for i in range(message_size):
+            best_predicted[i] = np.argmax(state.logits)
+            state = sess.apply(state, contaminated_token[i])
+        print numpy_to_string(best_predicted), state.full_log_probability
+
+        # feed random characters
+        best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
+        state = sess.feed_token(token)
+        for i in range(message_size):
+            best_predicted[i] = np.argmax(state.logits)
+            state = sess.apply(state, 'a')
+        print numpy_to_string(best_predicted), state.full_log_probability
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')

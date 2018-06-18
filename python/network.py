@@ -163,16 +163,16 @@ def train_network():
                 print ''
 
 class AutomataState(object):
-    def __init__(self, lstm_c, lstm_h, logits, prefix_state, full_prefix_logits=0, prefix=''):
+    def __init__(self, lstm_c, lstm_h, logits, full_prefix_logits=0, prefix=''):
         self.lstm_c = lstm_c
         self.lstm_h = lstm_h
         self.logits = logits
-        self.prefix_state = prefix_state
+        #self.prefix_state = prefix_state
         self.full_log_probability = full_prefix_logits
         self.prefix = prefix
 
-    def get_transitions(self):
-        return get_transitions(self.prefix_state)
+    #def get_transitions(self):
+    #    return get_transitions(self.prefix_state)
 
 class AutomataSession(object):
     def __init__(self):
@@ -207,26 +207,15 @@ class AutomataSession(object):
             [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
             feed_dict={self.apply_input_state_c:state.lstm_c, self.apply_input_state_h:state.lstm_h, self.apply_input_char:char})
         return AutomataState(lstm_c, lstm_h, next_char_logits,
-                             make_transition(state.prefix_state, ch),
                              state.full_log_probability + state.logits[0, char[0]], state.prefix + ch)
 
     def find_best_hypos(self, token, num_hypos=100):
         token += ' ' * (message_size - len(token))
-        current_states = [self.feed_token(token)]
+        zz = self.feed_token(token)
         for i in range(message_size):
-            next_states = []
-            for state in current_states:
-                transitions = get_transitions(state.prefix_state)
-                if len(transitions) > 0:
-                    for ch in transitions:
-                        next_states.append(self.apply(state, ch))
-                else:
-                    next_states.append(self.apply(state, ' '))
-            current_states = sorted(next_states, key=lambda x: -x.full_log_probability)
-            if len(current_states) > num_hypos:
-                current_states = current_states[0:num_hypos]
-        for state in current_states:
-            print state.prefix, state.full_log_probability
+            ch = int_to_char(np.argmax(zz.logits[0, :]))
+            zz = self.apply(zz, ch)
+        print zz.prefix
 
 def play():
     sess = AutomataSession()

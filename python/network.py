@@ -1,34 +1,17 @@
 import argparse, os
-import time
 import tensorflow as tf
 import numpy as np
 from convertions import NUM_SYMBOLS, string_to_numpy, SPACE_INT, numpy_to_string, int_to_char, char_to_int
 from dataset_generator import DataSetGenerator
-from prefix_tree import PrefixTree, get_prefix_tree_root, get_transitions, make_transition
 
-command      = None
-input_folder = None
-message_size = None
-batch_size   = None
-model_file   = None
-prefix_tree  = None
-prefix_tree_automata = None
-num_hypos    = 1000
+command             = None
+input_folder        = None
+message_size        = None
+batch_size          = None
+model_file          = None
+num_hypos           = 1000
 test_num_iterations = 2500
-test_batch_size = 10000
-
-#TODO: - 1. deal with mistakes on the first characters
-#TODO: - 2. memory map prefix tree to file
-#TODO: + 3. LSTM
-#TODO: + 4. testing with pagerank
-#TODO: + 5. doesn't work with absent spaces yet
-#TODO: | 6. learning by prefixes
-#TODO: - 7. port everything to pure C++
-#TODO: + 8. print mistakened tokens
-#TODO: - 9. creation of prefix tree is not ported from preifx-tree project
-#TODO: + 10. sort hypothesis by leventstein and only then by score
-#TODO: - 11. BUG: convert logits to log probs
-#TODO: - 12. Prefix bug in prefix tree
+test_batch_size     = 10000
 
 def train_network():
     with tf.device("/device:GPU:0"):
@@ -75,9 +58,9 @@ def train_network():
         initial_play_state = lstm.zero_state(1, tf.float32)
         for i in range(message_size):
             output, initial_play_state = lstm(contaminated_embedding[:, message_size - i - 1, :], initial_play_state)
-        initial_play_state_c = tf.identity(initial_play_state.c, 'initial_play_state_c')
-        initial_play_state_h = tf.identity(initial_play_state.h, 'initial_play_state_h')
-        initial_output = tf.identity(tf.matmul(output, hidden1) + biases1, 'initial_logits')
+        tf.identity(initial_play_state.c, 'initial_play_state_c')
+        tf.identity(initial_play_state.h, 'initial_play_state_h')
+        tf.identity(tf.matmul(output, hidden1) + biases1, 'initial_logits')
 
         # apply lstm cell
         apply_input_state_c = tf.placeholder(dtype=tf.float32, shape=(1, lstm_size), name='apply_input_state_c')
@@ -86,9 +69,9 @@ def train_network():
         apply_input_state = tf.contrib.rnn.LSTMStateTuple(apply_input_state_c, apply_input_state_h)
         apply_input_embedding = tf.nn.embedding_lookup(char_embedding_matrix, apply_input_char)
         apply_output_logits, apply_output_state = lstm(apply_input_embedding, apply_input_state)
-        apply_output_logits = tf.identity(tf.matmul(apply_output_logits, hidden1) + biases1, 'after_apply_logits')
-        apply_output_state_c = tf.identity(apply_output_state.c, 'after_apply_state_c')
-        apply_output_state_h = tf.identity(apply_output_state.h, 'after_apply_state_h')
+        tf.identity(tf.matmul(apply_output_logits, hidden1) + biases1, 'after_apply_logits')
+        tf.identity(apply_output_state.c, 'after_apply_state_c')
+        tf.identity(apply_output_state.h, 'after_apply_state_h')
 
     batch_generator = DataSetGenerator(dictionary_file='model/dictionary', message_size=message_size, mistake_probability=0.2)
     clean_test_batch, contaminated_test_batch = batch_generator.next(test_batch_size)
@@ -141,25 +124,6 @@ def train_network():
                                                                      float(test_num_correct) / float(test_num_letters))
                 print 'dummy: {} correct of {}; accuracy = {}'.format(dummy_num_correct, test_num_letters,
                                                                       float(dummy_num_correct) / float(test_num_letters))
-
-                """
-                # full tests
-                with open('/tmp/mistakened_tokens', 'w') as writer:
-                    num_found_tokens = 0
-                    for token_index in range(test_batch_size):
-                        np_predictions = np.empty(dtype=np.double, shape=[len(predictions), NUM_SYMBOLS])
-                        for letter_index in range(message_size):
-                            np_predictions[letter_index, :] = predictions[letter_index][token_index, :]
-                        clean_token = numpy_to_string(clean_test_batch[token_index, :]).strip()
-                        viterbi_tokens, viterbi_logits = prefix_tree.viterbi(np_predictions, num_hypos)
-                        if clean_token in viterbi_tokens:
-                            num_found_tokens += 1
-                        else:
-                            contaminated_token = numpy_to_string(contaminated_test_batch[token_index, :]).strip()
-                            writer.write('{} {}\n'.format(clean_token, contaminated_token))
-                print 'full: {} correct of {}; accuracy = {}'.format(num_found_tokens, test_batch_size,
-                                                                     float(num_found_tokens) / float(test_batch_size))
-                """
                 print ''
 
 class AutomataState(object):
@@ -167,12 +131,8 @@ class AutomataState(object):
         self.lstm_c = lstm_c
         self.lstm_h = lstm_h
         self.logits = logits
-        #self.prefix_state = prefix_state
         self.full_log_probability = full_prefix_logits
         self.prefix = prefix
-
-    #def get_transitions(self):
-    #    return get_transitions(self.prefix_state)
 
 class AutomataSession(object):
     def __init__(self):
@@ -198,7 +158,7 @@ class AutomataSession(object):
         lstm_c, lstm_h, first_char_logits = self.sess.run(
             [self.initial_play_state_c, self.initial_play_state_h, self.initial_logits],
             feed_dict={self.contaminated_tokens:numpy_token})
-        return AutomataState(lstm_c, lstm_h, first_char_logits, get_prefix_tree_root())
+        return AutomataState(lstm_c, lstm_h, first_char_logits)
 
     def apply(self, state, ch):
         char = np.empty(dtype=np.int32, shape=(1,))
@@ -209,46 +169,19 @@ class AutomataSession(object):
         return AutomataState(lstm_c, lstm_h, next_char_logits,
                              state.full_log_probability + state.logits[0, char[0]], state.prefix + ch)
 
-    def find_best_hypos(self, token, num_hypos=100):
+    def get_best_token(self, token):
         token += ' ' * (message_size - len(token))
-        zz = self.feed_token(token)
+        state = self.feed_token(token)
         for i in range(message_size):
-            ch = int_to_char(np.argmax(zz.logits[0, :]))
-            zz = self.apply(zz, ch)
-        print zz.prefix
+            ch = int_to_char(np.argmax(state.logits[0, :]))
+            state = self.apply(state, ch)
+        print state.prefix
 
 def play():
     sess = AutomataSession()
     while True:
         token = raw_input("Input something: ")
-        sess.find_best_hypos(token)
-
-        """
-        # feed the same token
-        best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
-        state = sess.feed_token(token)
-        for i in range(message_size):
-            best_predicted[i] = np.argmax(state.logits)
-            state = sess.apply(state, token[i])
-        print numpy_to_string(best_predicted), state.full_log_probability
-
-        # feed slightly contaminated
-        best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
-        state = sess.feed_token(token)
-        contaminated_token = ('z' + token)[0:message_size]
-        for i in range(message_size):
-            best_predicted[i] = np.argmax(state.logits)
-            state = sess.apply(state, contaminated_token[i])
-        print numpy_to_string(best_predicted), state.full_log_probability
-
-        # feed random characters
-        best_predicted = np.empty(dtype=np.int32, shape=(message_size,))
-        state = sess.feed_token(token)
-        for i in range(message_size):
-            best_predicted[i] = np.argmax(state.logits)
-            state = sess.apply(state, 'a')
-        print numpy_to_string(best_predicted), state.full_log_probability
-        """
+        sess.get_best_token(token)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
@@ -257,7 +190,6 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--message-size',     type=int, help='length of each token in batch', default=30)
     parser.add_argument('-b', '--batch-size',       type=int, help='number of tokens in batch',     default=128)
     parser.add_argument('-f', '--model-file',       type=str, help='file with binary model',        default=None)
-    parser.add_argument('-t', '--prefix-tree-file', type=str, help='prefix tree file',              default='model/prefix-tree')
     args = parser.parse_args()
     input_folder = args.input_folder
     message_size = args.message_size
@@ -265,7 +197,6 @@ if __name__ == '__main__':
     command = args.command
     model_file = args.model_file
     model_file = model_file if not model_file is None else 'model/model-1/model'
-    prefix_tree = PrefixTree(args.prefix_tree_file)
 
     if command == 'train':
         train_network()

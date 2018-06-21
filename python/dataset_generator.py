@@ -1,4 +1,4 @@
-import argparse, ctypes, os, sys 
+import argparse, ctypes
 import numpy as np
 from convertions import numpy_to_string
 

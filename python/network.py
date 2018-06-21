@@ -1,7 +1,7 @@
 import argparse, os
 import tensorflow as tf
 import numpy as np
-from convertions import NUM_SYMBOLS, string_to_numpy, SPACE_INT, numpy_to_string, int_to_char, char_to_int
+import convertions
 from dataset_generator import DataSetGenerator
 
 command             = None
@@ -17,20 +17,20 @@ def train_network():
     with tf.device("/device:GPU:0"):
         # input labels
         clean_tokens = tf.placeholder(tf.int32, [None, message_size], name='clean_tokens')                                        
-        clean_one_hot_embedding = tf.one_hot(clean_tokens, NUM_SYMBOLS)                                            
+        clean_one_hot_embedding = tf.one_hot(clean_tokens, convertions.NUM_SYMBOLS)
 
         # predictions
-        embedding_size = NUM_SYMBOLS
+        embedding_size = convertions.NUM_SYMBOLS
         contaminated_tokens = tf.placeholder(tf.int32, [None, message_size], name='contaminated_tokens')                                 
-        char_embedding_matrix = tf.Variable(tf.random_uniform([NUM_SYMBOLS, embedding_size], -1.0, 1.0))
+        char_embedding_matrix = tf.Variable(tf.random_uniform([convertions.NUM_SYMBOLS, embedding_size], -1.0, 1.0))
         contaminated_embedding = tf.nn.embedding_lookup(char_embedding_matrix, contaminated_tokens)
         clean_embedding = tf.nn.embedding_lookup(char_embedding_matrix, clean_tokens)
 
         # 97.5% with real token input
         lstm_size = 512
         lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
-        hidden1 = tf.Variable(tf.truncated_normal([lstm_size, NUM_SYMBOLS]))
-        biases1  = tf.Variable(tf.truncated_normal([NUM_SYMBOLS]))
+        hidden1 = tf.Variable(tf.truncated_normal([lstm_size, convertions.NUM_SYMBOLS]))
+        biases1  = tf.Variable(tf.truncated_normal([convertions.NUM_SYMBOLS]))
         def create_architecture(batch_size):
             logits = []
             state = lstm.zero_state(batch_size, tf.float32)
@@ -126,14 +126,6 @@ def train_network():
                                                                       float(dummy_num_correct) / float(test_num_letters))
                 print ''
 
-class AutomataState(object):
-    def __init__(self, lstm_c, lstm_h, logits, full_prefix_logits=0, prefix=''):
-        self.lstm_c = lstm_c
-        self.lstm_h = lstm_h
-        self.logits = logits
-        self.full_log_probability = full_prefix_logits
-        self.prefix = prefix
-
 class AutomataSession(object):
     def __init__(self):
         self.sess = tf.Session()
@@ -151,31 +143,28 @@ class AutomataSession(object):
         self.apply_input_state_h = self.graph.get_tensor_by_name('apply_input_state_h:0')
         self.apply_input_char = self.graph.get_tensor_by_name('apply_input_char:0')
 
-    def feed_token(self, token):
-        numpy_token = np.ones(message_size, dtype=np.int32) * SPACE_INT
-        numpy_token[0:len(token)] = string_to_numpy(token)
+    def get_best_token(self, token):
+        # convert token to numpy array
+        token += ' ' * (message_size - len(token))
+        numpy_token = np.ones(message_size, dtype=np.int32) * convertions.SPACE_INT
+        numpy_token[0:len(token)] = convertions.string_to_numpy(token)
         numpy_token = numpy_token.reshape((-1, message_size))
-        lstm_c, lstm_h, first_char_logits = self.sess.run(
+
+        # create intial state (encode)
+        lstm_c, lstm_h, logits = self.sess.run(
             [self.initial_play_state_c, self.initial_play_state_h, self.initial_logits],
             feed_dict={self.contaminated_tokens:numpy_token})
-        return AutomataState(lstm_c, lstm_h, first_char_logits)
 
-    def apply(self, state, ch):
-        char = np.empty(dtype=np.int32, shape=(1,))
-        char[0] = char_to_int(ch)
-        lstm_c, lstm_h, next_char_logits = self.sess.run(
-            [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
-            feed_dict={self.apply_input_state_c:state.lstm_c, self.apply_input_state_h:state.lstm_h, self.apply_input_char:char})
-        return AutomataState(lstm_c, lstm_h, next_char_logits,
-                             state.full_log_probability + state.logits[0, char[0]], state.prefix + ch)
-
-    def get_best_token(self, token):
-        token += ' ' * (message_size - len(token))
-        state = self.feed_token(token)
+        # pass over token and decode token (decode)
+        prefix = ''
         for i in range(message_size):
-            ch = int_to_char(np.argmax(state.logits[0, :]))
-            state = self.apply(state, ch)
-        print state.prefix
+            best_char_index = np.argmax(logits[0, :])
+            numpy_char = np.ones(dtype=np.int32, shape=(1,)) * best_char_index
+            lstm_c, lstm_h, logits = self.sess.run(
+                [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
+                feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
+            prefix += convertions.int_to_char(best_char_index)
+        print prefix
 
 def play():
     sess = AutomataSession()

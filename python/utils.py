@@ -37,3 +37,5 @@ if __name__ == '__main__':
     assert levenstein('abcd', 'bcde') == 2
     assert levenstein('abcdd', 'bcded') == 2
     assert levenstein('hello', 'dello') == 1
+    assert levenstein('amsterdam', 'masterdam') == 2
+    assert levenstein('amsterdamm', 'masterdamk') == 3

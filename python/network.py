@@ -81,10 +81,21 @@ class Network(object):
                 for i in range(message_size):
                     test_num_correct += np.sum((np.argmax(predictions[i], axis=1) == clean_test_batch[:, i]))
                     dummy_num_correct += np.sum(clean_test_batch[:, i] == contaminated_test_batch[:, i])
+
+                sum_levenstein = 0
+                all_predicted = np.empty(dtype=np.int32, shape=(test_batch_size, message_size))
+                for i in range(message_size):
+                    all_predicted[:, i] = np.argmax(predictions[i], axis=1)
+                for i in range(test_batch_size):
+                    predicted_token = utils.numpy_to_string(all_predicted[i, :])
+                    true_token = utils.numpy_to_string(clean_test_batch[i, :])
+                    sum_levenstein += utils.levenstein(predicted_token, true_token)
+
                 print 'test: {} correct of {}; accuracy = {}'.format(test_num_correct, test_num_letters,
                                                                      float(test_num_correct) / float(test_num_letters))
                 print 'dummy: {} correct of {}; accuracy = {}'.format(dummy_num_correct, test_num_letters,
                                                                       float(dummy_num_correct) / float(test_num_letters))
+                print 'levenstein: {}'.format(float(sum_levenstein) / float(test_batch_size))
                 print ''
 
     def read_all_required_tensors_from_file(self):

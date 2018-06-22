@@ -36,4 +36,4 @@ def levenstein(first_message, second_message):
 if __name__ == '__main__':
     assert levenstein('abcd', 'bcde') == 2
     assert levenstein('abcdd', 'bcded') == 2
-    print levenstein('hello', 'dello')
+    assert levenstein('hello', 'dello') == 1

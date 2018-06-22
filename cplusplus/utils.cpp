@@ -54,7 +54,8 @@ size_t levenstein(const char* first, const char* second, size_t message_size) {
       if (first[i] == second[j]) {
         grid[i * grid_size + j] = grid[(i + 1) * grid_size + (j + 1)];
       } else {
-        grid[i * grid_size + j] = 1 + std::min(grid[(i + 1) * grid_size + j], grid[i * grid_size + (j + 1)]);
+        grid[i * grid_size + j] = 1 + std::min(grid[(i + 1) * grid_size + (j + 1)],
+                                               std::min(grid[(i + 1) * grid_size + j], grid[i * grid_size + (j + 1)]));
       }
     }
   }

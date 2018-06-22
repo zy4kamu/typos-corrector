@@ -76,7 +76,7 @@ class Network(object):
                 test_num_letters = 0
                 dummy_num_correct = 0
                 predictions, = self.sess.run([test_logits], feed_dict={ self.contaminated_tokens:contaminated_test_batch,
-                                                                             self.clean_tokens:clean_test_batch })
+                                                                        self.clean_tokens:clean_test_batch })
                 test_num_letters += test_batch_size * message_size
                 for i in range(message_size):
                     test_num_correct += np.sum((np.argmax(predictions[i], axis=1) == clean_test_batch[:, i]))
@@ -97,6 +97,22 @@ class Network(object):
                                                                       float(dummy_num_correct) / float(test_num_letters))
                 print 'levenstein: {}'.format(float(sum_levenstein) / float(test_batch_size))
                 print ''
+
+    def test(self):
+        network.read_all_required_tensors_from_file()
+        batch_generator = DataSetGenerator(dictionary_file='model/dictionary', message_size=message_size, mistake_probability=0.2)
+        clean_test_batch, contaminated_test_batch = batch_generator.next(test_batch_size)
+        dummy_levenstein_sum = 0
+        predicted_levenstein_sum = 0
+        for i in range(test_batch_size):
+            print '\r', i, 'of', test_batch_size,
+            clean_token = utils.numpy_to_string(clean_test_batch[i, :])
+            contaminated_token = utils.numpy_to_string(contaminated_test_batch[i, :])
+            predicted_token = self.make_prediction_for_token(clean_token)
+            dummy_levenstein_sum += utils.levenstein(clean_token, contaminated_token)
+            predicted_levenstein_sum += utils.levenstein(clean_token, predicted_token)
+        print 'dummy levenstein: {}'.format(float(dummy_levenstein_sum) / float(test_batch_size))
+        print 'predicted levenstein: {}'.format(float(predicted_levenstein_sum) / float(test_batch_size))
 
     def read_all_required_tensors_from_file(self):
         saver = tf.train.import_meta_graph(model_file + '.meta', clear_devices=True)
@@ -181,7 +197,7 @@ class Network(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
-    parser.add_argument('-c', '--command',          type=str, help='command to process',            required=True, choices=['train', 'play'])
+    parser.add_argument('-c', '--command',          type=str, help='command to process',            required=True, choices=['train', 'play', 'test'])
     parser.add_argument('-i', '--input-folder',     type=str, help='folder with binary batches',    default='../dataset')
     parser.add_argument('-m', '--message-size',     type=int, help='length of each token in batch', default=30)
     parser.add_argument('-b', '--batch-size',       type=int, help='number of tokens in batch',     default=128)
@@ -203,5 +219,7 @@ if __name__ == '__main__':
         while True:
             token = raw_input("Input something: ")
             print network.make_prediction_for_token(token)
+    elif command == 'test':
+        network.test()
     else:
         raise ValueError(command)

@@ -1,6 +1,6 @@
 import argparse, ctypes
 import numpy as np
-from convertions import numpy_to_string
+from utils import numpy_to_string
 
 library = ctypes.cdll.LoadLibrary('../build/libbatch-generator.so')
 

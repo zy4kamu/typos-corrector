@@ -1,7 +1,7 @@
 import argparse, os
 import tensorflow as tf
 import numpy as np
-import convertions
+import utils
 from dataset_generator import DataSetGenerator
 
 command             = None
@@ -33,7 +33,7 @@ class Network(object):
             train_logits = self.__create_output_logits(batch_size)
 
             # create loss which we want to minimize and optimizer to make optimization
-            clean_one_hot_embedding = tf.one_hot(self.clean_tokens, convertions.NUM_SYMBOLS)
+            clean_one_hot_embedding = tf.one_hot(self.clean_tokens, utils.NUM_SYMBOLS)
             total_loss = None
             for i in range(message_size):
                 loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=train_logits[i], labels=clean_one_hot_embedding[:, i, :])
@@ -105,8 +105,8 @@ class Network(object):
     def make_prediction_for_token(self, token):
         # convert token to numpy array
         token += ' ' * (message_size - len(token))
-        numpy_token = np.ones(message_size, dtype=np.int32) * convertions.SPACE_INT
-        numpy_token[0:len(token)] = convertions.string_to_numpy(token)
+        numpy_token = np.ones(message_size, dtype=np.int32) * utils.SPACE_INT
+        numpy_token[0:len(token)] = utils.string_to_numpy(token)
         numpy_token = numpy_token.reshape((-1, message_size))
 
         # create intial state (encode)
@@ -122,7 +122,7 @@ class Network(object):
             lstm_c, lstm_h, logits = self.sess.run(
                 [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
                 feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
-            prefix += convertions.int_to_char(best_char_index)
+            prefix += utils.int_to_char(best_char_index)
         return prefix
 
     def __create_output_logits(self, batch_size):
@@ -141,12 +141,12 @@ class Network(object):
             self.clean_tokens = tf.placeholder(tf.int32, [None, message_size], name='clean_tokens')
             self.contaminated_tokens = tf.placeholder(tf.int32, [None, message_size], name='contaminated_tokens')
 
-            self.char_embedding_matrix = tf.Variable(tf.random_uniform([convertions.NUM_SYMBOLS, convertions.NUM_SYMBOLS], -1.0, 1.0))
+            self.char_embedding_matrix = tf.Variable(tf.random_uniform([utils.NUM_SYMBOLS, utils.NUM_SYMBOLS], -1.0, 1.0))
             self.contaminated_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.contaminated_tokens)
 
             self.lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
-            self.hidden_layer_weights = tf.Variable(tf.truncated_normal([lstm_size, convertions.NUM_SYMBOLS]))
-            self.hidden_layer_bias  = tf.Variable(tf.truncated_normal([convertions.NUM_SYMBOLS]))
+            self.hidden_layer_weights = tf.Variable(tf.truncated_normal([lstm_size, utils.NUM_SYMBOLS]))
+            self.hidden_layer_bias  = tf.Variable(tf.truncated_normal([utils.NUM_SYMBOLS]))
 
     def __initialize_tensors_for_online_application(self):
         # initial play state

@@ -1,6 +1,10 @@
 #include "utils.h"
 
 #include <cassert>
+#include <vector>
+
+#include <string>
+#include <iostream>
 
 const int32_t A_INT = static_cast<int32_t>('a');
 const int32_t Z_INT = static_cast<int32_t>('z');
@@ -26,10 +30,35 @@ char to_char(int32_t number) {
 std::string clean_token(const std::string& token) {
     std::string cleaned;
     for (char ch: token) {
-        ch = std::tolower(ch);
+        ch = static_cast<char>(std::tolower(ch));
         if (acceptable(ch)) {
             cleaned += ch;
         }
     }
     return cleaned;
 }
+
+extern "C" {
+
+size_t levenstein(const char* first, const char* second, size_t message_size) {
+  if (message_size == 0) {
+    return 0;
+  }
+  size_t grid_size = message_size + 1;
+  std::vector<size_t> grid(grid_size * grid_size, 0);
+  for (size_t i = 0; i < grid_size; ++i) {
+    grid[grid_size * message_size + i] = grid[message_size + i * grid_size] = grid_size - i - 1;
+  }
+  for (size_t i = message_size - 1; i + 1 != 0; --i) {
+    for (size_t j = message_size - 1; j + 1 != 0; --j) {
+      if (first[i] == second[j]) {
+        grid[i * grid_size + j] = grid[(i + 1) * grid_size + (j + 1)];
+      } else {
+        grid[i * grid_size + j] = 1 + std::min(grid[(i + 1) * grid_size + j], grid[i * grid_size + (j + 1)]);
+      }
+    }
+  }
+  return grid[0];
+}
+
+} // extern C

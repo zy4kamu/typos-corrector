@@ -11,5 +11,6 @@ else ()
     SET(CMAKE_CXX_FLAGS "-O0 -g ${COMMON_CXX_FLAGS}")
 endif ()
 
-add_library(batch-generator SHARED contaminator.cpp random-batch-generator.cpp utils.cpp)
-target_link_libraries(batch-generator boost_filesystem boost_system)
+add_library(utils utils.cpp)
+add_library(batch-generator SHARED contaminator.cpp random-batch-generator.cpp)
+target_link_libraries(batch-generator boost_filesystem boost_system utils)

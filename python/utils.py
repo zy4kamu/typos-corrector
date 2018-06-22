@@ -1,4 +1,7 @@
 import numpy as np
+import ctypes
+
+library = ctypes.cdll.LoadLibrary('../build/libbatch-generator.so')
 
 A_INT = np.int32(ord('a'))
 Z_INT = np.int32(ord('z'))
@@ -21,3 +24,16 @@ def numpy_to_string(array):
 
 def string_to_numpy(string):
     return np.array([char_to_int(letter) for letter in string], dtype=np.int32)
+
+def levenstein(first_message, second_message):
+    assert type(first_message) == str
+    assert type(second_message) == str
+    assert len(first_message) == len(second_message)
+    func = library.levenstein
+    func.restype = ctypes.c_size_t
+    return func(ctypes.c_char_p(first_message), ctypes.c_char_p(second_message), ctypes.c_size_t(len(first_message)))
+
+if __name__ == '__main__':
+    assert levenstein('abcd', 'bcde') == 2
+    assert levenstein('abcdd', 'bcded') == 2
+    print levenstein('hello', 'dello')

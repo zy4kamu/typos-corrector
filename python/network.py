@@ -6,9 +6,9 @@ from dataset_generator import DataSetGenerator
 
 command             = None
 input_folder        = None
-message_size        = None
+message_size        = 30
 batch_size          = None
-model_file          = None
+model_file          = 'model/model-1/model'
 num_hypos           = 1000
 test_num_iterations = 2500
 test_batch_size     = 10000
@@ -123,7 +123,7 @@ class Network(object):
                 [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
                 feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
             prefix += convertions.int_to_char(best_char_index)
-        print prefix
+        return prefix
 
     def __create_output_logits(self, batch_size):
         clean_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.clean_tokens)
@@ -191,6 +191,6 @@ if __name__ == '__main__':
         network.read_all_required_tensors_from_file()
         while True:
             token = raw_input("Input something: ")
-            network.make_prediction_for_token(token)
+            print network.make_prediction_for_token(token)
     else:
         raise ValueError(command)

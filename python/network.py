@@ -12,7 +12,7 @@ model_file          = 'model/model-1/model'
 num_hypos           = 1000
 test_num_iterations = 2500
 test_batch_size     = 10000
-lstm_size           = 512
+lstm_size           = 1024
 
 class Network(object):
     def __init__(self):

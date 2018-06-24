@@ -9,10 +9,52 @@ input_folder        = None
 message_size        = 30
 batch_size          = None
 model_file          = 'model/model-1/model'
-num_hypos           = 1000
 test_num_iterations = 2500
 test_batch_size     = 10000
 lstm_size           = 1024
+
+#TODO: 1. remove char_embedding: one hot is enough
+#TODO: 2. insert handcrafted LSTM and measure quality
+#TODO: 3. reduce rank of all matrices
+
+# Not used yet
+class LSTM(object):
+    def __init__(self, input_size, output_size):
+        self.input_size = input_size
+        self.output_size = output_size
+        # Input gate: input, previous output, and bias.
+        self.ix = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
+        self.im = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
+        self.ib = tf.Variable(tf.zeros([1, output_size]))
+        # Forget gate: input, previous output, and bias.
+        self.fx = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
+        self.fm = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
+        self.fb = tf.Variable(tf.zeros([1, output_size]))
+        # Memory cell: input, state and bias.
+        self.cx = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
+        self.cm = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
+        self.cb = tf.Variable(tf.zeros([1, output_size]))
+        # Output gate: input, previous output, and bias.
+        self.ox = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
+        self.om = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
+        self.ob = tf.Variable(tf.zeros([1, output_size]))
+
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+        self.state = tf.zeros([batch_size, self.output_size])
+        self.output = tf.zeros([batch_size, self.output_size])
+
+    def lstm_cell(self, i):
+        forget_gate = tf.sigmoid(tf.matmul(i, self.fx) + tf.matmul(self.output, self.fm) + self.fb)
+        self.state = forget_gate * self.state
+
+        input_gate = tf.sigmoid(tf.matmul(i, self.ix) + tf.matmul(self.output, self.im) + self.ib)
+        update = tf.matmul(i, self.cx) + tf.matmul(self.output, self.cm) + self.cb
+        self.state = self.state + input_gate * tf.tanh(update)
+
+        output_gate = tf.sigmoid(tf.matmul(i, self.ox) + tf.matmul(self.output, self.om) + self.ob)
+        self.output = output_gate * tf.tanh(self.state)
+        return self.output
 
 class Network(object):
     def __init__(self):
@@ -37,9 +79,10 @@ class Network(object):
             total_loss = None
             for i in range(message_size):
                 loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=train_logits[i], labels=clean_one_hot_embedding[:, i, :])
-                loss = tf.reduce_sum(loss)
+                loss = tf.reduce_mean(loss)
                 if total_loss is None: total_loss = loss
                 else: total_loss += loss
+            total_loss /= message_size
             optimizer = tf.train.AdamOptimizer().minimize(total_loss)
 
         initializer = tf.global_variables_initializer()
@@ -155,12 +198,12 @@ class Network(object):
     def __create_output_logits(self, batch_size):
         clean_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.clean_tokens)
         logits = []
-        state = self.lstm.zero_state(batch_size, tf.float32)
+        state = self.encode_lstm.zero_state(batch_size, tf.float32)
         for i in range(message_size):
-            output, state = self.lstm(self.contaminated_embedding[:, message_size - i - 1, :], state)
+            output, state = self.encode_lstm(self.contaminated_embedding[:, message_size - i - 1, :], state)
         for i in range(message_size):
             logits.append(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias)
-            output, state = self.lstm(clean_embedding[:, i, :], state)
+            output, state = self.decode_lstm(clean_embedding[:, i, :], state)
         return logits
 
     def __initialize_for_training(self):
@@ -171,15 +214,16 @@ class Network(object):
             self.char_embedding_matrix = tf.Variable(tf.random_uniform([utils.NUM_SYMBOLS, utils.NUM_SYMBOLS], -1.0, 1.0))
             self.contaminated_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.contaminated_tokens)
 
-            self.lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
+            self.encode_lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
+            self.decode_lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
             self.hidden_layer_weights = tf.Variable(tf.truncated_normal([lstm_size, utils.NUM_SYMBOLS]))
             self.hidden_layer_bias  = tf.Variable(tf.truncated_normal([utils.NUM_SYMBOLS]))
 
     def __initialize_tensors_for_online_application(self):
         # initial play state
-        initial_play_state = self.lstm.zero_state(1, tf.float32)
+        initial_play_state = self.encode_lstm.zero_state(1, tf.float32)
         for i in range(message_size):
-            output, initial_play_state = self.lstm(self.contaminated_embedding[:, message_size - i - 1, :], initial_play_state)
+            output, initial_play_state = self.encode_lstm(self.contaminated_embedding[:, message_size - i - 1, :], initial_play_state)
         tf.identity(initial_play_state.c, 'initial_play_state_c')
         tf.identity(initial_play_state.h, 'initial_play_state_h')
         tf.identity(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias, 'initial_logits')
@@ -190,7 +234,7 @@ class Network(object):
         apply_input_char = tf.placeholder(dtype=np.int32, shape=(1,), name='apply_input_char')
         apply_input_state = tf.contrib.rnn.LSTMStateTuple(apply_input_state_c, apply_input_state_h)
         apply_input_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, apply_input_char)
-        apply_output_logits, apply_output_state = self.lstm(apply_input_embedding, apply_input_state)
+        apply_output_logits, apply_output_state = self.decode_lstm(apply_input_embedding, apply_input_state)
         tf.identity(tf.matmul(apply_output_logits, self.hidden_layer_weights) + self.hidden_layer_bias, 'after_apply_logits')
         tf.identity(apply_output_state.c, 'after_apply_state_c')
         tf.identity(apply_output_state.h, 'after_apply_state_h')

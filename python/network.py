@@ -192,7 +192,7 @@ class Network(object):
         self.apply_input_state_h = self.graph.get_tensor_by_name('apply_input_state_h:0')
         self.apply_input_char = self.graph.get_tensor_by_name('apply_input_char:0')
 
-    def make_prediction_for_token(self, token):
+    def make_prediction_for_token(self, token, verbose=False, allow_mistake=0.01):
         # convert token to numpy array
         token += ' ' * (message_size - len(token))
         numpy_token = np.ones(message_size, dtype=np.int32) * utils.SPACE_INT
@@ -200,20 +200,55 @@ class Network(object):
         numpy_token = numpy_token.reshape((-1, message_size))
 
         # create intial state (encode)
-        lstm_c, lstm_h, logits = self.sess.run(
+        initial_lstm_c, initial_lstm_h, initial_logits = self.sess.run(
             [self.initial_play_state_c, self.initial_play_state_h, self.initial_logits],
             feed_dict={self.contaminated_tokens:numpy_token})
 
         # pass over token and decode token (decode)
-        prefix = ''
-        for i in range(message_size):
+        best_hypo = ''
+        probs = []
+        lstm_c, lstm_h, logits = initial_lstm_c, initial_lstm_h, initial_logits
+        for t in range(message_size):
             best_char_index = np.argmax(logits[0, :])
+            probs.append(np.exp(logits[0,:]) / np.sum(np.exp(logits[0, :])))
             numpy_char = np.ones(dtype=np.int32, shape=(1,)) * best_char_index
             lstm_c, lstm_h, logits = self.sess.run(
                 [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
                 feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
-            prefix += utils.int_to_char(best_char_index)
-        return prefix
+            best_hypo += utils.int_to_char(best_char_index)
+
+        # trick to allow 1 mistake in word
+        other_hypos = []
+        if not allow_mistake is None:
+            allowed_mistakes = []
+            for t in range(message_size):
+                for ch in range(utils.NUM_SYMBOLS):
+                    max_probs = np.max(probs[t])
+                    if probs[t][ch] > allow_mistake and probs[t][ch] + 1e-5 < max_probs:
+                        allowed_mistakes.append((t, ch, probs[t][ch]))
+            allowed_mistakes = sorted(allowed_mistakes, key=lambda (t, ch, p): -p)
+            for t, ch, p in allowed_mistakes:
+                mistakened_prefix = ''
+                lstm_c, lstm_h, logits = initial_lstm_c, initial_lstm_h, initial_logits
+                for tt in range(message_size):
+                    best_char_index = ch if t == tt else np.argmax(logits[0, :])
+                    probs.append(np.exp(logits[0,:]) / np.sum(np.exp(logits[0, :])))
+                    numpy_char = np.ones(dtype=np.int32, shape=(1,)) * best_char_index
+                    lstm_c, lstm_h, logits = self.sess.run(
+                        [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
+                        feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
+                    mistakened_prefix += utils.int_to_char(best_char_index)
+                if utils.levenstein(mistakened_prefix, token) < 4:
+                    other_hypos.append(mistakened_prefix)
+
+        # print table of probabilities
+        if verbose:
+            def format(number):
+                return '....' if number < 0.03 else '{:1.2f}'.format(number)
+            print ' ', ':', '  '.join(['{:4.0f}'.format(_) for _ in range(message_size)])
+            for ch in range(utils.NUM_SYMBOLS):
+                print utils.int_to_char(ch), ':', '  '.join([format(probs[t][ch]) for t in range(message_size)])
+        return best_hypo, other_hypos
 
     def __create_output_logits(self, batch_size):
         clean_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.clean_tokens)
@@ -282,7 +317,12 @@ if __name__ == '__main__':
         network.read_all_required_tensors_from_file()
         while True:
             token = raw_input("Input something: ")
-            print network.make_prediction_for_token(token)
+            best_hypo, other_hypos = network.make_prediction_for_token(token)
+            print best_hypo
+            if len(other_hypos) > 0:
+                print ''
+                print 'other hypos:'
+                print '\n'.join(other_hypos)
     elif command == 'test':
         network.test()
     else:

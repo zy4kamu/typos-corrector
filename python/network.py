@@ -4,6 +4,9 @@ import numpy as np
 import utils
 from dataset_generator import DataSetGenerator
 
+from tensorflow.python.ops import math_ops
+from tensorflow.python.ops import init_ops
+
 command             = None
 input_folder        = None
 message_size        = 30
@@ -16,6 +19,23 @@ lstm_size           = 1024
 #TODO: 1. remove char_embedding: one hot is enough
 #TODO: 2. insert handcrafted LSTM and measure quality
 #TODO: 3. reduce rank of all matrices
+
+class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
+    def __init__(self, num_units, forget_bias=1.0,
+                 state_is_tuple=True, activation=None, reuse=None, name=None):
+        super(CompressedLSTM, self).__init__(num_units, forget_bias, state_is_tuple, activation, reuse, name)
+
+    def build(self, inputs_shape):
+        if inputs_shape[1].value is None:
+            raise ValueError("Expected inputs.shape[-1] to be known, saw shape: %s"
+                             % inputs_shape)
+        input_depth = inputs_shape[1].value
+        h_depth = self._num_units
+        self._left_matrix = self.add_variable("left_matrix", shape=[input_depth + h_depth, 64])
+        self._right_matrix = self.add_variable("right_matrix", shape=[64, 4 * self._num_units])
+        self._kernel = math_ops.mat_mul(self._left_matrix, self._right_matrix)
+        self._bias = self.add_variable("bias",shape=[4 * self._num_units],
+                                       initializer=init_ops.zeros_initializer(dtype=self.dtype))
 
 # Not used yet
 class LSTM(object):

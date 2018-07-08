@@ -12,6 +12,9 @@ public:
     std::string remove_random_char(const std::string& token);
     std::string contaminate(const std::string& token);
 private:
+    char get_random_qwerty_neighbour(char letter, bool allow_repeat);
+    char get_random_char();
+
     double mistake_probability;
     std::mt19937 generator;
 };

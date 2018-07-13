@@ -12,5 +12,5 @@ else ()
 endif ()
 
 add_library(utils utils.cpp)
-add_library(batch-generator SHARED contaminator.cpp random-batch-generator.cpp)
+add_library(batch-generator SHARED contaminator.cpp random-batch-generator.cpp compressor.cpp)
 target_link_libraries(batch-generator boost_filesystem boost_system utils)

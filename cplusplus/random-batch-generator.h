@@ -4,6 +4,7 @@
 #include <string>
 #include <random>
 
+#include "compressor.h"
 #include "contaminator.h"
 
 struct RandomBatchGenerator: private Contaminator {
@@ -11,6 +12,7 @@ struct RandomBatchGenerator: private Contaminator {
     void generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch,
                                size_t message_size, size_t batch_size);
 private:
+    Compressor compressor;
     std::vector<std::string> tokens;
     std::vector<size_t> weights;
     std::discrete_distribution<size_t> token_distribution;

@@ -1,4 +1,6 @@
 #include "random-batch-generator.h"
+
+#include "compressor.h"
 #include "utils.h"
 
 #include <algorithm>
@@ -22,6 +24,7 @@ RandomBatchGenerator::RandomBatchGenerator(const char* input_file, double mistak
         tokens.push_back(token);
         weights.push_back(1);
     }
+    compressor.set(tokens);
     token_distribution = std::discrete_distribution<size_t>(weights.begin(), weights.end());
     prefix_distribution = std::uniform_int_distribution<size_t>(0, std::numeric_limits<size_t>::max());
 }
@@ -32,17 +35,18 @@ void RandomBatchGenerator::generate_random_batch(int32_t* clean_batch, int32_t* 
     std::fill(contaminated_batch, contaminated_batch + message_size * batch_size, Z_INT - A_INT + 1);
     for (size_t i = 0; i < batch_size; ) {
         std::string clean_token = tokens[token_distribution(generator)];
+        std::string compressed_clean_token = compressor.compress(clean_token);
         if (LEARN_BY_PREFIXES && clean_token.length() > MIN_PREFIX_SIZE) {
             size_t prefix_size = MIN_PREFIX_SIZE + prefix_distribution(generator) % (clean_token.length() - MIN_PREFIX_SIZE);
             clean_token.resize(prefix_size);
         }
         std::string contaminated_token = contaminate(clean_token);
-        if (clean_token.size() > message_size || contaminated_token.size() > message_size)
+        if (compressed_clean_token.size() > message_size || contaminated_token.size() > message_size)
         {
             continue;
         }
         int32_t shift = static_cast<int32_t>(i * message_size);
-        std::transform(clean_token.begin(), clean_token.end(), clean_batch + shift, to_int);
+        std::transform(compressed_clean_token.begin(), compressed_clean_token.end(), clean_batch + shift, to_int);
         std::transform(contaminated_token.begin(), contaminated_token.end(), contaminated_batch + shift, to_int);
         ++i;
     }
@@ -54,13 +58,13 @@ std::unique_ptr<RandomBatchGenerator> DATASET_GENERATOR;
 
 extern "C" {
 
-void create_random_batch_generator(const char* prefix_tree_file, double mistake_probability) {
-    DATASET_GENERATOR = boost::make_unique<RandomBatchGenerator>(prefix_tree_file,
+void create_random_batch_generator(const char* input_file, double mistake_probability) {
+    DATASET_GENERATOR = boost::make_unique<RandomBatchGenerator>(input_file,
                                                                 mistake_probability);
 }
 
 void generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch,
-                           size_t message_size, size_t batch_size, double ) {
+                           size_t message_size, size_t batch_size) {
     DATASET_GENERATOR->generate_random_batch(clean_batch, contaminated_batch,
                                             message_size, batch_size);
 }

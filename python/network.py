@@ -2,23 +2,18 @@ import argparse, os
 import tensorflow as tf
 import numpy as np
 import utils
-from dataset_generator import DataSetGenerator
+import cpp_bindings
 
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import init_ops
 
-command             = None
-input_folder        = None
-message_size        = 30
-batch_size          = None
-model_file          = 'model/model-1/model'
+message_size = 30
+batch_size = None
+model_file = 'model/model-1/model'
 test_num_iterations = 2500
-test_batch_size     = 10000
-lstm_size           = 1024
+test_batch_size = 10000
+lstm_size = 1024
 
-#TODO: 1. remove char_embedding: one hot is enough
-#TODO: 2. insert handcrafted LSTM and measure quality
-#TODO: 3. reduce rank of all matrices
 
 class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
     def __init__(self, num_units, forget_bias=1.0,
@@ -37,44 +32,6 @@ class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
         self._bias = self.add_variable("bias",shape=[4 * self._num_units],
                                        initializer=init_ops.zeros_initializer(dtype=self.dtype))
 
-# Not used yet
-class LSTM(object):
-    def __init__(self, input_size, output_size):
-        self.input_size = input_size
-        self.output_size = output_size
-        # Input gate: input, previous output, and bias.
-        self.ix = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
-        self.im = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
-        self.ib = tf.Variable(tf.zeros([1, output_size]))
-        # Forget gate: input, previous output, and bias.
-        self.fx = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
-        self.fm = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
-        self.fb = tf.Variable(tf.zeros([1, output_size]))
-        # Memory cell: input, state and bias.
-        self.cx = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
-        self.cm = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
-        self.cb = tf.Variable(tf.zeros([1, output_size]))
-        # Output gate: input, previous output, and bias.
-        self.ox = tf.Variable(tf.truncated_normal([input_size, output_size], -0.1, 0.1))
-        self.om = tf.Variable(tf.truncated_normal([output_size, output_size], -0.1, 0.1))
-        self.ob = tf.Variable(tf.zeros([1, output_size]))
-
-    def set_batch_size(self, batch_size):
-        self.batch_size = batch_size
-        self.state = tf.zeros([batch_size, self.output_size])
-        self.output = tf.zeros([batch_size, self.output_size])
-
-    def lstm_cell(self, i):
-        forget_gate = tf.sigmoid(tf.matmul(i, self.fx) + tf.matmul(self.output, self.fm) + self.fb)
-        self.state = forget_gate * self.state
-
-        input_gate = tf.sigmoid(tf.matmul(i, self.ix) + tf.matmul(self.output, self.im) + self.ib)
-        update = tf.matmul(i, self.cx) + tf.matmul(self.output, self.cm) + self.cb
-        self.state = self.state + input_gate * tf.tanh(update)
-
-        output_gate = tf.sigmoid(tf.matmul(i, self.ox) + tf.matmul(self.output, self.om) + self.ob)
-        self.output = output_gate * tf.tanh(self.state)
-        return self.output
 
 class Network(object):
     def __init__(self):
@@ -83,12 +40,11 @@ class Network(object):
     def train(self):
         self.__initialize_for_training()
         self.__initialize_tensors_for_online_application()
-        batch_generator = DataSetGenerator(dictionary_file='model/dictionary', message_size=message_size, mistake_probability=0.2)
         counter = 0
         train_num_correct = 0
         train_num_letters = 0
 
-        clean_test_batch, contaminated_test_batch = batch_generator.next(test_batch_size)
+        update_region_id, clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size)
 
         with tf.device("/device:GPU:0"):
             test_logits = self.__create_output_logits(test_batch_size)
@@ -109,7 +65,7 @@ class Network(object):
         self.sess.run(initializer)
         while True:
             # update gradient
-            clean, contaminated = batch_generator.next(batch_size)
+            update_region_id, clean, contaminated = cpp_bindings.generate_random_batch(batch_size, message_size)
             _, predictions, l = self.sess.run([optimizer, train_logits, total_loss],
                 feed_dict={ self.clean_tokens:clean, self.contaminated_tokens:contaminated })
 
@@ -152,7 +108,7 @@ class Network(object):
                 for i in range(test_batch_size):
                     predicted_token = utils.numpy_to_string(all_predicted[i, :])
                     true_token = utils.numpy_to_string(clean_test_batch[i, :])
-                    sum_levenstein += utils.levenstein(predicted_token, true_token)
+                    sum_levenstein += cpp_bindings.levenstein(predicted_token, true_token)
 
                 print 'test: {} correct of {}; accuracy = {}'.format(test_num_correct, test_num_letters,
                                                                      float(test_num_correct) / float(test_num_letters))
@@ -162,8 +118,10 @@ class Network(object):
                 print ''
 
     def test(self):
+        # TODO: restore this function
+        pass
+        '''
         network.read_all_required_tensors_from_file()
-        batch_generator = DataSetGenerator(dictionary_file='model/dictionary', message_size=message_size, mistake_probability=0.2)
         clean_test_batch, contaminated_test_batch = batch_generator.next(test_batch_size)
         dummy_levenstein_sum = 0
         predicted_levenstein_sum = 0
@@ -172,10 +130,11 @@ class Network(object):
             clean_token = utils.numpy_to_string(clean_test_batch[i, :])
             contaminated_token = utils.numpy_to_string(contaminated_test_batch[i, :])
             predicted_token = self.make_prediction_for_token(clean_token)
-            dummy_levenstein_sum += utils.levenstein(clean_token, contaminated_token)
-            predicted_levenstein_sum += utils.levenstein(clean_token, predicted_token)
+            dummy_levenstein_sum += cpp_bindings.levenstein(clean_token, contaminated_token)
+            predicted_levenstein_sum += cpp_bindings.levenstein(clean_token, predicted_token)
         print 'dummy levenstein: {}'.format(float(dummy_levenstein_sum) / float(test_batch_size))
         print 'predicted levenstein: {}'.format(float(predicted_levenstein_sum) / float(test_batch_size))
+        '''
 
     def read_all_required_tensors_from_file(self):
         saver = tf.train.import_meta_graph(model_file + '.meta', clear_devices=True)
@@ -238,7 +197,7 @@ class Network(object):
                         [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
                         feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
                     mistakened_prefix += utils.int_to_char(best_char_index)
-                if utils.levenstein(mistakened_prefix, token) < 4:
+                if cpp_bindings.levenstein(mistakened_prefix, token) < 4:
                     other_hypos.append(mistakened_prefix)
 
         # print table of probabilities
@@ -296,34 +255,35 @@ class Network(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
-    parser.add_argument('-c', '--command',          type=str, help='command to process',            required=True, choices=['train', 'play', 'test'])
-    parser.add_argument('-i', '--input-folder',     type=str, help='folder with binary batches',    default='../dataset')
-    parser.add_argument('-m', '--message-size',     type=int, help='length of each token in batch', default=30)
-    parser.add_argument('-b', '--batch-size',       type=int, help='number of tokens in batch',     default=128)
-    parser.add_argument('-f', '--model-file',       type=str, help='file with binary model',        default=None)
+    parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test'])
+    parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
+    parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=30)
+    parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=128)
+    parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
+    parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
     args = parser.parse_args()
-    input_folder = args.input_folder
     message_size = args.message_size
     batch_size = args.batch_size
-    command = args.command
     model_file = args.model_file
     model_file = model_file if not model_file is None else 'model/model-1/model'
 
+    cpp_bindings.generate_cpp_bindings(args.input_folder, args.mistake_probability)
     network = Network()
 
-    if command == 'train':
+    if args.command == 'train':
         network.train()
-    elif command == 'play':
+    elif args.command == 'play':
         network.read_all_required_tensors_from_file()
         while True:
             token = raw_input("Input something: ")
             best_hypo, other_hypos = network.make_prediction_for_token(token)
-            print best_hypo
+            print best_hypo, '->', cpp_bindings.decompress(best_hypo)
             if len(other_hypos) > 0:
                 print ''
                 print 'other hypos:'
-                print '\n'.join(other_hypos)
-    elif command == 'test':
+                for hypo in other_hypos:
+                    print hypo, '->', cpp_bindings.decompress(hypo)
+    elif args.command == 'test':
         network.test()
     else:
-        raise ValueError(command)
+        raise ValueError(args.command)

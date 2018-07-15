@@ -11,6 +11,5 @@ else ()
     SET(CMAKE_CXX_FLAGS "-O0 -g ${COMMON_CXX_FLAGS}")
 endif ()
 
-add_library(utils utils.cpp)
-add_library(batch-generator SHARED contaminator.cpp random-batch-generator.cpp compressor.cpp)
-target_link_libraries(batch-generator boost_filesystem boost_system utils)
+add_library(python-bindings SHARED contaminator.cpp random-batch-generator.cpp compressor.cpp update-regions.cpp python-bindings.cpp utils.cpp)
+target_link_libraries(python-bindings boost_filesystem boost_system)

@@ -5,7 +5,7 @@
 
 namespace {
 
-std::unordered_map<char, std::vector<char>> QWERTY_MAP =
+const std::unordered_map<char, std::vector<char>> QWERTY_MAP =
 {
     {'q', {'a', 'w', 's'}},
     {'w', {'q', 'a', 's', 'd', 'e'}},
@@ -42,7 +42,7 @@ Contaminator::Contaminator(double mistake_probability): mistake_probability(mist
                                         , generator(1) {
 }
 
-std::string Contaminator::swap_random_chars(const std::string& token) {
+std::string Contaminator::swap_random_chars(const std::string& token) const {
     if (token.size() < 2) {
         return token;
     }
@@ -51,7 +51,7 @@ std::string Contaminator::swap_random_chars(const std::string& token) {
     return token.substr(0, index) + token[index + 1] + token[index] + token.substr(index + 2);
 }
 
-std::string Contaminator::replace_random_char(const std::string& token) {
+std::string Contaminator::replace_random_char(const std::string& token) const {
     if (token.empty()) {
         return token;
     }
@@ -60,7 +60,7 @@ std::string Contaminator::replace_random_char(const std::string& token) {
     return token.substr(0, index) + get_random_qwerty_neighbour(token[index], false) + token.substr(index + 1);
 }
 
-std::string Contaminator::add_random_char(const std::string& token) {
+std::string Contaminator::add_random_char(const std::string& token) const {
     if (token.empty()) {
         return std::string(1, get_random_char());
     }
@@ -72,13 +72,13 @@ std::string Contaminator::add_random_char(const std::string& token) {
     return token.substr(0, index) + get_random_qwerty_neighbour(token[index], true) + token.substr(index);
 }
 
-std::string Contaminator::remove_random_char(const std::string& token) {
+std::string Contaminator::remove_random_char(const std::string& token) const {
     std::uniform_int_distribution<size_t> distribution(0, token.size() - 1);
     size_t index = distribution(generator);
     return token.substr(0, index) + token.substr(index + 1);
 }
 
-std::string Contaminator::contaminate(const std::string& token) {
+std::string Contaminator::contaminate(const std::string& token) const {
     std::bernoulli_distribution contaminate_distribution(mistake_probability);
     std::uniform_int_distribution<int> distribution(0, 3);
     std::string contaminated_token = token;
@@ -106,7 +106,7 @@ std::string Contaminator::contaminate(const std::string& token) {
 
 // helpers
 
-char Contaminator::get_random_qwerty_neighbour(char letter, bool allow_repeat) {
+char Contaminator::get_random_qwerty_neighbour(char letter, bool allow_repeat) const {
     const std::vector<char>& neighbours = QWERTY_MAP.at(letter);
     if (allow_repeat) {
         std::uniform_int_distribution<size_t> distribution(0, neighbours.size());
@@ -118,7 +118,7 @@ char Contaminator::get_random_qwerty_neighbour(char letter, bool allow_repeat) {
     return neighbours[index];
 }
 
-char Contaminator::get_random_char() {
+char Contaminator::get_random_char() const {
     std::uniform_int_distribution<size_t> char_distribution(A_INT, Z_INT + 1);
     char letter = char_distribution(generator);
     if (static_cast<int32_t>(letter) == Z_INT + 1) {
@@ -126,5 +126,3 @@ char Contaminator::get_random_char() {
     }
     return letter;
 }
-
-

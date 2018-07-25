@@ -117,109 +117,6 @@ class Network(object):
                 print 'levenstein: {}'.format(float(sum_levenstein) / float(test_batch_size))
                 print ''
 
-    def test(self):
-        # TODO: restore this function
-        pass
-        '''
-        network.read_all_required_tensors_from_file()
-        clean_test_batch, contaminated_test_batch = batch_generator.next(test_batch_size)
-        dummy_levenstein_sum = 0
-        predicted_levenstein_sum = 0
-        for i in range(test_batch_size):
-            print '\r', i, 'of', test_batch_size,
-            clean_token = utils.numpy_to_string(clean_test_batch[i, :])
-            contaminated_token = utils.numpy_to_string(contaminated_test_batch[i, :])
-            predicted_token = self.make_prediction_for_token(clean_token)
-            dummy_levenstein_sum += cpp_bindings.levenstein(clean_token, contaminated_token)
-            predicted_levenstein_sum += cpp_bindings.levenstein(clean_token, predicted_token)
-        print 'dummy levenstein: {}'.format(float(dummy_levenstein_sum) / float(test_batch_size))
-        print 'predicted levenstein: {}'.format(float(predicted_levenstein_sum) / float(test_batch_size))
-        '''
-
-    def read_all_required_tensors_from_file(self):
-        saver = tf.train.import_meta_graph(model_file + '.meta', clear_devices=True)
-        saver.restore(self.sess, tf.train.latest_checkpoint(os.path.dirname(model_file + '.meta')))
-        self.graph = tf.get_default_graph()
-        self.contaminated_tokens = self.graph.get_tensor_by_name("contaminated_tokens:0")
-        self.initial_play_state_c = self.graph.get_tensor_by_name('initial_play_state_c:0')
-        self.initial_play_state_h = self.graph.get_tensor_by_name('initial_play_state_h:0')
-        self.initial_logits = self.graph.get_tensor_by_name('initial_logits:0')
-        self.apply_output_logits = self.graph.get_tensor_by_name('after_apply_logits:0')
-        self.apply_output_state_c = self.graph.get_tensor_by_name('after_apply_state_c:0')
-        self.apply_output_state_h = self.graph.get_tensor_by_name('after_apply_state_h:0')
-        self.apply_input_state_c = self.graph.get_tensor_by_name('apply_input_state_c:0')
-        self.apply_input_state_h = self.graph.get_tensor_by_name('apply_input_state_h:0')
-        self.apply_input_char = self.graph.get_tensor_by_name('apply_input_char:0')
-
-    def make_prediction_for_token(self, token, verbose=False, allow_mistake=0.01):
-        # convert token to numpy array
-        token += ' ' * (message_size - len(token))
-        numpy_token = np.ones(message_size, dtype=np.int32) * utils.SPACE_INT
-        numpy_token[0:len(token)] = utils.string_to_numpy(token)
-        numpy_token = numpy_token.reshape((-1, message_size))
-
-        # create intial state (encode)
-        initial_lstm_c, initial_lstm_h, initial_logits = self.sess.run(
-            [self.initial_play_state_c, self.initial_play_state_h, self.initial_logits],
-            feed_dict={self.contaminated_tokens:numpy_token})
-
-        # pass over token and decode token (decode)
-        best_hypo = ''
-        probs = []
-        lstm_c, lstm_h, logits = initial_lstm_c, initial_lstm_h, initial_logits
-        for t in range(message_size):
-            best_char_index = np.argmax(logits[0, :])
-            probs.append(np.exp(logits[0,:]) / np.sum(np.exp(logits[0, :])))
-            numpy_char = np.ones(dtype=np.int32, shape=(1,)) * best_char_index
-            lstm_c, lstm_h, logits = self.sess.run(
-                [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
-                feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
-            best_hypo += utils.int_to_char(best_char_index)
-
-        # trick to allow 1 mistake in word
-        other_hypos = []
-        if not allow_mistake is None:
-            allowed_mistakes = []
-            for t in range(message_size):
-                for ch in range(utils.NUM_SYMBOLS):
-                    max_probs = np.max(probs[t])
-                    if probs[t][ch] > allow_mistake and probs[t][ch] + 1e-5 < max_probs:
-                        allowed_mistakes.append((t, ch, probs[t][ch]))
-            allowed_mistakes = sorted(allowed_mistakes, key=lambda (t, ch, p): -p)
-            for t, ch, p in allowed_mistakes:
-                mistakened_prefix = ''
-                lstm_c, lstm_h, logits = initial_lstm_c, initial_lstm_h, initial_logits
-                for tt in range(message_size):
-                    best_char_index = ch if t == tt else np.argmax(logits[0, :])
-                    probs.append(np.exp(logits[0,:]) / np.sum(np.exp(logits[0, :])))
-                    numpy_char = np.ones(dtype=np.int32, shape=(1,)) * best_char_index
-                    lstm_c, lstm_h, logits = self.sess.run(
-                        [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
-                        feed_dict={self.apply_input_state_c:lstm_c, self.apply_input_state_h:lstm_h, self.apply_input_char:numpy_char})
-                    mistakened_prefix += utils.int_to_char(best_char_index)
-                if cpp_bindings.levenstein(mistakened_prefix, token) < 4:
-                    other_hypos.append(mistakened_prefix)
-
-        # print table of probabilities
-        if verbose:
-            def format(number):
-                return '....' if number < 0.03 else '{:1.2f}'.format(number)
-            print ' ', ':', '  '.join(['{:4.0f}'.format(_) for _ in range(message_size)])
-            for ch in range(utils.NUM_SYMBOLS):
-                print utils.int_to_char(ch), ':', '  '.join([format(probs[t][ch]) for t in range(message_size)])
-        return best_hypo, other_hypos
-
-    def __create_output_logits(self, batch_size):
-        clean_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.clean_tokens)
-        logits = []
-        state = self.encode_lstm.zero_state(batch_size, tf.float32)
-        for i in range(message_size):
-            output, state = self.encode_lstm(self.contaminated_embedding[:, message_size - i - 1, :], state)
-        for i in range(message_size):
-            logits.append(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias)
-            output, state = self.decode_lstm(clean_embedding[:, i, :], state)
-        return logits
-
     def __initialize_for_training(self):
         with tf.device("/device:GPU:0"):
             self.clean_tokens = tf.placeholder(tf.int32, [None, message_size], name='clean_tokens')
@@ -253,6 +150,134 @@ class Network(object):
         tf.identity(apply_output_state.c, 'after_apply_state_c')
         tf.identity(apply_output_state.h, 'after_apply_state_h')
 
+    def __create_output_logits(self, batch_size):
+        clean_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.clean_tokens)
+        logits = []
+        state = self.encode_lstm.zero_state(batch_size, tf.float32)
+        for i in range(message_size):
+            output, state = self.encode_lstm(self.contaminated_embedding[:, message_size - i - 1, :], state)
+        for i in range(message_size):
+            logits.append(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias)
+            output, state = self.decode_lstm(clean_embedding[:, i, :], state)
+        return logits
+
+class NetworkAutomata(Network):
+    def __init__(self):
+        Network.__init__(self)
+        self._default_mistake_counter = DefaultMistakeCounter()
+
+        saver = tf.train.import_meta_graph(model_file + '.meta', clear_devices=True)
+        saver.restore(self.sess, tf.train.latest_checkpoint(os.path.dirname(model_file + '.meta')))
+        self.graph = tf.get_default_graph()
+        self.contaminated_tokens = self.graph.get_tensor_by_name("contaminated_tokens:0")
+        self.initial_play_state_c = self.graph.get_tensor_by_name('initial_play_state_c:0')
+        self.initial_play_state_h = self.graph.get_tensor_by_name('initial_play_state_h:0')
+        self.initial_logits = self.graph.get_tensor_by_name('initial_logits:0')
+        self.apply_output_logits = self.graph.get_tensor_by_name('after_apply_logits:0')
+        self.apply_output_state_c = self.graph.get_tensor_by_name('after_apply_state_c:0')
+        self.apply_output_state_h = self.graph.get_tensor_by_name('after_apply_state_h:0')
+        self.apply_input_state_c = self.graph.get_tensor_by_name('apply_input_state_c:0')
+        self.apply_input_state_h = self.graph.get_tensor_by_name('apply_input_state_h:0')
+        self.apply_input_char = self.graph.get_tensor_by_name('apply_input_char:0')
+
+        self._reset()
+
+    def encode(self, token):
+        self._reset()
+        # convert token to numpy array
+        token += ' ' * (message_size - len(token))
+        numpy_token = np.ones(message_size, dtype=np.int32) * utils.SPACE_INT
+        numpy_token[0:len(token)] = utils.string_to_numpy(token)
+        numpy_token = numpy_token.reshape((-1, message_size))
+
+        # create intial state (encode)
+        self._lstm_c, self._lstm_h, logits = self.sess.run(
+            [self.initial_play_state_c, self.initial_play_state_h, self.initial_logits],
+            feed_dict={self.contaminated_tokens:numpy_token})
+
+        self._probs = [np.exp(logits[0,:]) / np.sum(np.exp(logits[0, :]))]
+        self._break_logits.append(np.log(self._probs[-1]) + self._default_mistake_counter.get(1))
+        return self._probs[-1]
+
+    def apply(self, letter):
+        self._input_history += letter
+        numpy_char = np.ones(dtype=np.int32, shape=(1,)) * utils.char_to_int(letter)
+        self._lstm_c, self._lstm_h, logits = self.sess.run(
+            [self.apply_output_state_c, self.apply_output_state_h, self.apply_output_logits],
+            feed_dict={self.apply_input_state_c:self._lstm_c, self.apply_input_state_h:self._lstm_h, self.apply_input_char:numpy_char})
+        length = len(self._input_history)
+        new_probs = np.exp(logits[0,:]) / np.sum(np.exp(logits[0, :]))
+        if length < message_size:
+            self._break_logits.append(self._history_logit + np.log(new_probs) + self._default_mistake_counter.get(length + 1))
+        self._history_logit += np.log(self._probs[-1][utils.char_to_int(letter)] + 1e-3)
+        self._probs.append(new_probs)
+        return new_probs
+
+    def get_best_char(self, probs):
+        return utils.int_to_char(np.argmax(probs))
+
+    def get_best_hypo(self):
+        return self._input_history
+
+    def get_alternatives(self):
+        alternatives = []
+        for position in range(message_size):
+            for letter in range(utils.NUM_SYMBOLS):
+                hypo = self._input_history[0:position] + utils.int_to_char(letter)
+                if not self._input_history.startswith(hypo):
+                    alternatives.append((self._break_logits[position][letter], hypo))
+        alternatives = sorted(alternatives, key=lambda (x, y): -x)
+        return alternatives
+
+    def _reset(self):
+        self._lstm_c = None
+        self._lstm_h = None
+        self._probs = None
+        self._break_logits = []
+        self._history_logit = 0
+        self._input_history = ''
+
+class DefaultMistakeCounter(object):
+    def __init__(self):
+        probs = []
+        with open('model/first-mistake-statistics') as reader:
+            for line in reader:
+                probs.append(float(line))
+        for i in range(message_size):
+            probs[message_size - i - 1] += probs[message_size - i]
+        self._logits = [np.log(probs[-1] / p) for p in probs]
+
+    def get(self, position):
+        return self._logits[position]
+
+class HypoSearcher(NetworkAutomata):
+    def __init__(self):
+        NetworkAutomata.__init__(self)
+
+    def search(self, token, num_attempts=10):
+        attempt = 0
+        prefixes = [(self._default_mistake_counter.get(0), '')]
+        checked_prefixes = []
+        while len(prefixes) > 0 and attempt < num_attempts:
+            attempt += 1
+            prefix = prefixes[0][1]
+            probs = self.encode(token)
+            for i in range(message_size):
+                letter = prefix[i] if i < len(prefix) else self.get_best_char(probs)
+                probs = self.apply(letter)
+            best_hypo =  self.get_best_hypo()
+            print 'trying "' + best_hypo.strip() + '" ...'
+            decompressed = cpp_bindings.decompress(best_hypo)
+            if len(decompressed) > 0:
+                print 'found something: ', decompressed, '...'
+                return
+            else:
+                checked_prefixes.append(prefix)
+                prefixes.extend(self.get_alternatives())
+                prefixes = sorted(prefixes, key=lambda (x, y): -x)
+                prefixes = filter(lambda (x, y): not y in checked_prefixes, prefixes)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test'])
@@ -268,22 +293,35 @@ if __name__ == '__main__':
     model_file = model_file if not model_file is None else 'model/model-1/model'
 
     cpp_bindings.generate_cpp_bindings(args.input_folder, args.mistake_probability)
-    network = Network()
 
     if args.command == 'train':
+        network = Network()
         network.train()
     elif args.command == 'play':
-        network.read_all_required_tensors_from_file()
+        hypo_searcher = HypoSearcher()
         while True:
             token = raw_input("Input something: ")
-            best_hypo, other_hypos = network.make_prediction_for_token(token)
-            print best_hypo, '->', cpp_bindings.decompress(best_hypo)
-            if len(other_hypos) > 0:
-                print ''
-                print 'other hypos:'
-                for hypo in other_hypos:
-                    print hypo, '->', cpp_bindings.decompress(hypo)
+            hypo_searcher.search(token)
+            print ''
     elif args.command == 'test':
-        network.test()
+        first_mistake_statistics = np.zeros(message_size + 1)
+        automata = NetworkAutomata()
+        update_region_id, clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size)
+        for _ in range(test_batch_size):
+            if _ % 100 == 0: print _
+            clean_token = utils.numpy_to_string(clean_test_batch[_, :])
+            contaminated_token = utils.numpy_to_string(contaminated_test_batch[_, :])
+            probs = automata.encode(contaminated_token)
+            for i in range(message_size):
+                letter = automata.get_best_char(probs)
+                if letter != clean_token[i]:
+                    first_mistake_statistics[i] += 1
+                    break
+                if i + 1 == message_size:
+                    first_mistake_statistics[-1] += 1
+                probs = automata.apply(letter)
+            with open('model/first-mistake-statistics', 'w') as writer:
+                writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
     else:
         raise ValueError(args.command)
+

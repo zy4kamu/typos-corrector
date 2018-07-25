@@ -15,7 +15,7 @@ def generate_cpp_bindings(update_regions_folder='model/update-regions', mistake_
 def decompress(token):
     decompressed = ' ' * 1024
     _library.decompress(ctypes.c_char_p(token.strip()), ctypes.c_char_p(decompressed))
-    return decompressed.strip().split('|')
+    return filter(lambda x: len(x) > 0, decompressed.strip().split('|'))
 
 
 def generate_random_batch(batch_size, message_size):

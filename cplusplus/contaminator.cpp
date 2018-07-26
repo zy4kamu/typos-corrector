@@ -36,6 +36,11 @@ const std::unordered_map<char, std::vector<char>> QWERTY_MAP =
     {' ', {'z', 'x', 'c', 'v', 'b', 'n', 'm'}}
 };
 
+const std::vector<char> ALHABET = {
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+    't', 'u', 'v', 'w', 'x', 'y', 'z'
+};
+
 } // anonymous namespace
 
 Contaminator::Contaminator(double mistake_probability): mistake_probability(mistake_probability)
@@ -57,7 +62,7 @@ std::string Contaminator::replace_random_char(const std::string& token) const {
     }
     std::uniform_int_distribution<size_t> distribution(0, token.size() - 1);
     size_t index = distribution(generator);
-    return token.substr(0, index) + get_random_qwerty_neighbour(token[index], false) + token.substr(index + 1);
+    return token.substr(0, index) + get_random_char() + token.substr(index + 1);
 }
 
 std::string Contaminator::add_random_char(const std::string& token) const {
@@ -67,9 +72,9 @@ std::string Contaminator::add_random_char(const std::string& token) const {
     std::uniform_int_distribution<size_t> distribution(0, token.size());
     size_t index = distribution(generator);
     if (index == token.size()) {
-        return token + get_random_qwerty_neighbour(token.back(), true);
+        return token + get_random_char();
     }
-    return token.substr(0, index) + get_random_qwerty_neighbour(token[index], true) + token.substr(index);
+    return token.substr(0, index) + get_random_char() + token.substr(index);
 }
 
 std::string Contaminator::remove_random_char(const std::string& token) const {

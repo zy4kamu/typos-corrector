@@ -5,7 +5,7 @@ if [ ! -d ../build ]; then
 fi
 
 pushd ../build
-#cmake ../cplusplus -DCMAKE_BUILD_TYPE=RELEASE
-cmake ../cplusplus -DCMAKE_BUILD_TYPE=DEBUG
+cmake ../cplusplus -DCMAKE_BUILD_TYPE=RELEASE
+#cmake ../cplusplus -DCMAKE_BUILD_TYPE=DEBUG
 make
 popd

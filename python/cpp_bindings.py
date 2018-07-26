@@ -18,6 +18,13 @@ def decompress(token):
     return filter(lambda x: len(x) > 0, decompressed.strip().split('|'))
 
 
+def find_by_prefix(token, max_number):
+    decompressed = ' ' * 100000
+    _library.find_by_prefix(ctypes.c_char_p(token.strip()), ctypes.c_size_t(max_number),
+                            ctypes.c_char_p(decompressed))
+    return filter(lambda x: len(x) > 0, decompressed.strip().split('|'))
+
+
 def generate_random_batch(batch_size, message_size, use_one_update_region=True):
     clean = np.empty([batch_size, message_size], dtype=np.int32)
     contaminated = np.empty([batch_size, message_size], dtype=np.int32)

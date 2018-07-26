@@ -256,7 +256,7 @@ class HypoSearcher(NetworkAutomata):
     def __init__(self):
         NetworkAutomata.__init__(self)
 
-    def search(self, token, num_attempts=10):
+    def search(self, token, num_attempts=100):
         attempt = 0
         prefixes = [(self._default_mistake_counter.get(0), '')]
         checked_prefixes = []
@@ -285,7 +285,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test'])
     parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=30)
-    parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=128)
+    parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=512)
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
     args = parser.parse_args()

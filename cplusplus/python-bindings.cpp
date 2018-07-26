@@ -56,6 +56,19 @@ void decompress(const char* token, char* output) {
     }
 }
 
+void find_by_prefix(const char* prefix, size_t max_size, char* output) {
+    assert(COMPRESSOR);
+    std::vector<std::string> decompressed = COMPRESSOR->find_by_prefix(prefix, max_size);
+    std::stringstream stream;
+    for (const std::string& decompresed_token : decompressed) {
+        stream << decompresed_token << "|";
+    }
+    const std::string concatenated = stream.str();
+    if (!concatenated.empty()) {
+        std::memcpy(output, concatenated.c_str(), concatenated.length() - 1);
+    }
+}
+
 void create_random_batch_generator() {
     assert(UPDATE_REGION_SET);
     assert(!BATCH_GENERATOR);

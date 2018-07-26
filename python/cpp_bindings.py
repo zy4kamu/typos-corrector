@@ -18,16 +18,26 @@ def decompress(token):
     return filter(lambda x: len(x) > 0, decompressed.strip().split('|'))
 
 
-def generate_random_batch(batch_size, message_size):
+def generate_random_batch(batch_size, message_size, use_one_update_region=True):
     clean = np.empty([batch_size, message_size], dtype=np.int32)
     contaminated = np.empty([batch_size, message_size], dtype=np.int32)
-    function = _library.generate_random_batch
-    function.restype = ctypes.c_int32
-    update_region_id = function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                                contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                                ctypes.c_size_t(message_size),
-                                ctypes.c_size_t(batch_size))
-    return update_region_id, clean, contaminated
+    if use_one_update_region:
+        function = _library.generate_random_batch_on_one_update_region
+        function.restype = ctypes.c_int32
+        update_region_id = function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+                                    contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+                                    ctypes.c_size_t(message_size),
+                                    ctypes.c_size_t(batch_size))
+        return update_region_id, clean, contaminated
+    else:
+        function = _library.generate_random_batch_on_all_update_regions
+        function.restype = ctypes.c_int32
+        function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+                 contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+                 ctypes.c_size_t(message_size),
+                 ctypes.c_size_t(batch_size))
+        return clean, contaminated
+
 
 def levenstein(first_message, second_message):
     assert type(first_message) == str

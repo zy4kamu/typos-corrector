@@ -12,7 +12,7 @@ batch_size = None
 model_file = 'model/model-1/model'
 test_num_iterations = 2500
 test_batch_size = 10000
-lstm_size = 1024
+lstm_size = 128
 
 
 class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
@@ -44,7 +44,8 @@ class Network(object):
         train_num_correct = 0
         train_num_letters = 0
 
-        update_region_id, clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size)
+        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size,
+                                                                                       use_one_update_region=False)
 
         with tf.device("/device:GPU:0"):
             test_logits = self.__create_output_logits(test_batch_size)
@@ -65,7 +66,8 @@ class Network(object):
         self.sess.run(initializer)
         while True:
             # update gradient
-            update_region_id, clean, contaminated = cpp_bindings.generate_random_batch(batch_size, message_size)
+            clean, contaminated = cpp_bindings.generate_random_batch(batch_size, message_size,
+                                                                     use_one_update_region=False)
             _, predictions, l = self.sess.run([optimizer, train_logits, total_loss],
                 feed_dict={ self.clean_tokens:clean, self.contaminated_tokens:contaminated })
 
@@ -306,7 +308,8 @@ if __name__ == '__main__':
     elif args.command == 'test':
         first_mistake_statistics = np.zeros(message_size + 1)
         automata = NetworkAutomata()
-        update_region_id, clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size)
+        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size,
+                                                                                       use_one_update_region=False)
         for _ in range(test_batch_size):
             if _ % 100 == 0: print _
             clean_token = utils.numpy_to_string(clean_test_batch[_, :])

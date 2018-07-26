@@ -62,9 +62,16 @@ void create_random_batch_generator() {
     BATCH_GENERATOR = boost::make_unique<RandomBatchGenerator>(*UPDATE_REGION_SET, *CONTAMINATOR, *COMPRESSOR);
 }
 
-int32_t generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch, size_t message_size, size_t batch_size) {
+int32_t generate_random_batch_on_one_update_region(int32_t* clean_batch, int32_t* contaminated_batch,
+                                                   size_t message_size, size_t batch_size) {
     assert(BATCH_GENERATOR);
-    return BATCH_GENERATOR->generate_random_batch(clean_batch, contaminated_batch, message_size, batch_size);
+    return BATCH_GENERATOR->generate_random_batch_on_one_ur(clean_batch, contaminated_batch, message_size, batch_size);
+}
+
+void generate_random_batch_on_all_update_regions(int32_t* clean_batch, int32_t* contaminated_batch,
+                                                    size_t message_size, size_t batch_size) {
+    assert(BATCH_GENERATOR);
+    BATCH_GENERATOR->generate_random_batch_on_all_urs(clean_batch, contaminated_batch, message_size, batch_size);
 }
 
 } // extern "C"

@@ -12,7 +12,7 @@ batch_size = None
 model_file = 'model/model-1/model'
 test_num_iterations = 2500
 test_batch_size = 10000
-lstm_size = 256
+lstm_size = 512
 
 
 class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
@@ -260,6 +260,62 @@ class HypoSearcher(NetworkAutomata):
         attempt = 0
         prefixes = [(self._default_mistake_counter.get(0), '')]
         checked_prefixes = []
+
+        while len(prefixes) > 0 and attempt < num_attempts:
+            attempt += 1
+            prefix = prefixes[0][1]
+
+            # 1. check if there is a good match by default
+            hypo, decompressed = self.__get_hypos_from_prefix(token, prefix)
+            if len(decompressed) > 0:
+                print 'found something: ', decompressed, '...'
+                return
+
+            # 2. find max coincided prefix from hypo
+            max_coincided_length = self.__get_max_coincided_prefix(token, hypo)
+            if max_coincided_length == -1: return
+
+            # 3. add hypos
+            prefixes.extend(self.get_alternatives())
+            prefixes = filter(lambda (x, y): not y.startswith(hypo[0:max_coincided_length]), prefixes)
+            checked_prefixes.append(prefix)
+            prefixes = filter(lambda (x, y): not y in checked_prefixes, prefixes)
+            prefixes = sorted(prefixes, key=lambda (x, y): -x)
+
+    def __get_hypos_from_prefix(self, token, prefix):
+        probs = self.encode(token)
+        for i in range(message_size):
+            letter = prefix[i] if i < len(prefix) else self.get_best_char(probs)
+            probs = self.apply(letter)
+        best_hypo =  self.get_best_hypo()
+        print 'trying hypo "' + best_hypo.strip() + '" ...'
+        decompressed = cpp_bindings.decompress(best_hypo)
+        return best_hypo, decompressed
+
+    def __get_max_coincided_prefix(self, token, hypo):
+        for i in range(1, len(hypo)):
+            found = cpp_bindings.find_by_prefix(hypo[0:i], 20)
+            if len(found) == 0:
+                return i - 1
+            elif len(found) < 20:
+                for h in found:
+                    if len(h) > message_size: continue
+                    if cpp_bindings.levenstein(h + ' ' * (message_size - len(h)),
+                                               token + ' ' * (message_size - len(token))) < 4:
+                        print 'found by prefix ', h, '...'
+                        return -1
+                return i - 1
+
+
+"""
+class HypoSearcher(NetworkAutomata):
+    def __init__(self):
+        NetworkAutomata.__init__(self)
+
+    def search(self, token, num_attempts=100):
+        attempt = 0
+        prefixes = [(self._default_mistake_counter.get(0), '')]
+        checked_prefixes = []
         prohibited_prefixes = []
         number_of_database_requests = 0
         while len(prefixes) > 0 and attempt < num_attempts:
@@ -303,6 +359,7 @@ class HypoSearcher(NetworkAutomata):
                 prefixes = filter(lambda (x, y): not y in checked_prefixes, prefixes)
                 for prefix in prohibited_prefixes:
                     prefixes = filter(lambda (x, y): not y.startswith(prefix), prefixes)
+"""
 
 
 if __name__ == '__main__':

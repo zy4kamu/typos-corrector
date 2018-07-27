@@ -261,24 +261,29 @@ class HypoSearcher(NetworkAutomata):
         prefixes = [(self._default_mistake_counter.get(0), '')]
         checked_prefixes = []
         prohibited_prefixes = []
+        number_of_database_requests = 0
         while len(prefixes) > 0 and attempt < num_attempts:
             attempt += 1
             prefix = prefixes[0][1]
-            found_by_prefix = cpp_bindings.find_by_prefix(prefix, 10)
-            if len(found_by_prefix) == 0:
-                prohibited_prefixes.append(prefix)
-                prefixes = filter(lambda (x, y): not y.startswith(prefix), prefixes)
-                print 'tried prefix: ', prefix, '... excluded'
-                continue
-            elif len(found_by_prefix) < 10:
-                for hypo in found_by_prefix:
-                    if cpp_bindings.levenstein(hypo + ' ' * (message_size - len(hypo)),
-                                               token + ' ' * (message_size - len(token)))< 4:
-                        print 'found by prefix: ', hypo, '...'
-                        return
-                print 'tried prefix: ', prefix, '... excluded'
-            else:
-                print 'tried prefix: ', prefix, '... accepted'
+            if len(prefix) > 4:
+                zz_prefix = prefix[0:-1]
+                found_by_prefix = cpp_bindings.find_by_prefix(zz_prefix, 20)
+                number_of_database_requests += 1
+                if len(found_by_prefix) == 0:
+                    prohibited_prefixes.append(zz_prefix)
+                    prefixes = filter(lambda (x, y): not y.startswith(zz_prefix), prefixes)
+                    print 'tried prefix: ', zz_prefix, '... excluded'
+                    continue
+                elif len(found_by_prefix) < 20:
+                    for hypo in found_by_prefix:
+                        if cpp_bindings.levenstein(hypo + ' ' * (message_size - len(hypo)),
+                                                   token + ' ' * (message_size - len(token)))< 4:
+                            print 'found by prefix ', zz_prefix, ': ', hypo, '...'
+                            print 'number of database requests: ', number_of_database_requests
+                            return
+                    print 'tried prefix: ', zz_prefix, '... excluded'
+                else:
+                    print 'tried prefix: ', zz_prefix, '... accepted'
             probs = self.encode(token)
             for i in range(message_size):
                 letter = prefix[i] if i < len(prefix) else self.get_best_char(probs)
@@ -286,8 +291,10 @@ class HypoSearcher(NetworkAutomata):
             best_hypo =  self.get_best_hypo()
             print 'trying hypo "' + best_hypo.strip() + '" ...'
             decompressed = cpp_bindings.decompress(best_hypo)
+            number_of_database_requests += 1
             if len(decompressed) > 0:
                 print 'found something: ', decompressed, '...'
+                print 'number of database requests: ', number_of_database_requests
                 return
             else:
                 checked_prefixes.append(prefix)

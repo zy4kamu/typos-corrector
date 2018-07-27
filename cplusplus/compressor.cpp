@@ -36,6 +36,7 @@ std::string Compressor::compress(const std::string& token) const {
     std::string compressed(token);
     std::replace(compressed.begin(), compressed.end(), 'c', 'k');
     std::replace(compressed.begin(), compressed.end(), 'w', 'v');
+    std::replace(compressed.begin(), compressed.end(), 'e', 'i');
 
     if (compressed.empty()) {
         return compressed;

@@ -88,3 +88,7 @@ if __name__ == '__main__':
     assert levenstein('amsterdam', 'masterdam') == 2
     assert levenstein('amsterdamm', 'masterdamk') == 3
 
+    generate_cpp_bindings('model/update-regions', 0.2)
+    print find_by_prefix('krelis', 20)
+
+

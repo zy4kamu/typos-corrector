@@ -57,12 +57,13 @@ const std::vector<std::string>& Compressor::decompress(const std::string& compre
 
 std::vector<std::string> Compressor::find_by_prefix(const std::string& prefix, size_t max_number) const {
     std::vector<std::string> results;
-    auto found = decompress_map.find(prefix);
+    auto found = decompress_map.lower_bound(prefix);
     while (found != decompress_map.end() && boost::starts_with(found->first, prefix)) {
         results.insert(results.end(), found->second.begin(), found->second.end());
         if (results.size() > max_number) {
             return results;
         }
+        ++found;
     }
     return results;
 }

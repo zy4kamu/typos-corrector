@@ -12,7 +12,7 @@ batch_size = None
 model_file = 'model/model-1/model'
 test_num_iterations = 2500
 test_batch_size = 10000
-lstm_size = 128
+lstm_size = 256
 
 
 class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
@@ -260,15 +260,31 @@ class HypoSearcher(NetworkAutomata):
         attempt = 0
         prefixes = [(self._default_mistake_counter.get(0), '')]
         checked_prefixes = []
+        prohibited_prefixes = []
         while len(prefixes) > 0 and attempt < num_attempts:
             attempt += 1
             prefix = prefixes[0][1]
+            found_by_prefix = cpp_bindings.find_by_prefix(prefix, 10)
+            if len(found_by_prefix) == 0:
+                prohibited_prefixes.append(prefix)
+                prefixes = filter(lambda (x, y): not y.startswith(prefix), prefixes)
+                print 'tried prefix: ', prefix, '... excluded'
+                continue
+            elif len(found_by_prefix) < 10:
+                for hypo in found_by_prefix:
+                    if cpp_bindings.levenstein(hypo + ' ' * (message_size - len(hypo)),
+                                               token + ' ' * (message_size - len(token)))< 4:
+                        print 'found by prefix: ', hypo, '...'
+                        return
+                print 'tried prefix: ', prefix, '... excluded'
+            else:
+                print 'tried prefix: ', prefix, '... accepted'
             probs = self.encode(token)
             for i in range(message_size):
                 letter = prefix[i] if i < len(prefix) else self.get_best_char(probs)
                 probs = self.apply(letter)
             best_hypo =  self.get_best_hypo()
-            print 'trying "' + best_hypo.strip() + '" ...'
+            print 'trying hypo "' + best_hypo.strip() + '" ...'
             decompressed = cpp_bindings.decompress(best_hypo)
             if len(decompressed) > 0:
                 print 'found something: ', decompressed, '...'
@@ -278,6 +294,8 @@ class HypoSearcher(NetworkAutomata):
                 prefixes.extend(self.get_alternatives())
                 prefixes = sorted(prefixes, key=lambda (x, y): -x)
                 prefixes = filter(lambda (x, y): not y in checked_prefixes, prefixes)
+                for prefix in prohibited_prefixes:
+                    prefixes = filter(lambda (x, y): not y.startswith(prefix), prefixes)
 
 
 if __name__ == '__main__':

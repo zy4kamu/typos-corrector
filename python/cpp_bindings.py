@@ -3,12 +3,18 @@ import numpy as np
 
 _library = ctypes.cdll.LoadLibrary('../build/libpython-bindings.so')
 
+MESSAGE_SIZE = None
 
-def generate_cpp_bindings(update_regions_folder='model/update-regions', mistake_probability=0.2):
+
+def generate_cpp_bindings(#ngrams_file='model/ngrams',
+        update_regions_folder='model/update-regions', mistake_probability=0.2, message_size=15):
+    global MESSAGE_SIZE
+    MESSAGE_SIZE = message_size
     _set_update_regions_folder(update_regions_folder)
     _create_update_regions_set()
-    _create_contaminator(mistake_probability)
-    _create_compressor()
+    _create_contaminator(#ctypes.c_char_p(ngrams_file),
+        mistake_probability)
+    _create_compressor(message_size)
     _create_random_batch_generator()
 
 
@@ -25,15 +31,14 @@ def find_by_prefix(token, max_number):
     return filter(lambda x: len(x) > 0, decompressed.strip().split('|'))
 
 
-def generate_random_batch(batch_size, message_size, use_one_update_region=True):
-    clean = np.empty([batch_size, message_size], dtype=np.int32)
-    contaminated = np.empty([batch_size, message_size], dtype=np.int32)
+def generate_random_batch(batch_size, use_one_update_region=True):
+    clean = np.empty([batch_size, MESSAGE_SIZE], dtype=np.int32)
+    contaminated = np.empty([batch_size, MESSAGE_SIZE], dtype=np.int32)
     if use_one_update_region:
         function = _library.generate_random_batch_on_one_update_region
         function.restype = ctypes.c_int32
         update_region_id = function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
                                     contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                                    ctypes.c_size_t(message_size),
                                     ctypes.c_size_t(batch_size))
         return update_region_id, clean, contaminated
     else:
@@ -41,7 +46,6 @@ def generate_random_batch(batch_size, message_size, use_one_update_region=True):
         function.restype = ctypes.c_int32
         function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
                  contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                 ctypes.c_size_t(message_size),
                  ctypes.c_size_t(batch_size))
         return clean, contaminated
 
@@ -70,8 +74,8 @@ def _create_contaminator(mistake_probability):
     _library.create_contaminator(ctypes.c_double(mistake_probability))
 
 
-def _create_compressor():
-    _library.create_compressor()
+def _create_compressor(message_size):
+    _library.create_compressor(ctypes.c_size_t(message_size))
 
 
 def _create_random_batch_generator():

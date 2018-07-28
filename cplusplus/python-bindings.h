@@ -7,8 +7,8 @@ extern "C" {
 
 void set_update_regions_folder(const char* input_folder);
 void create_update_regions_set();
-void create_contaminator(double mistake_probability);
-void create_compressor();
+void create_contaminator(const char* ngrams_file, double mistake_probability);
+void create_compressor(size_t message_size);
 void decompress(const char* token, char* output);
 void find_by_prefix(const char* prefix, size_t max_size, char* output);
 void create_random_batch_generator();

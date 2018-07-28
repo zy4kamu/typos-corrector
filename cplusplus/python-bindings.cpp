@@ -32,15 +32,15 @@ void create_update_regions_set() {
     UPDATE_REGION_SET = boost::make_unique<UpdateRegionSet>(UPDATE_REGIONS_FOLDER);
 }
 
-void create_contaminator(double mistake_probability) {
+void create_contaminator(const char* ngrams_file, double mistake_probability) {
     assert(!CONTAMINATOR);
-    CONTAMINATOR = boost::make_unique<Contaminator>(mistake_probability);
+    CONTAMINATOR = boost::make_unique<Contaminator>(ngrams_file, mistake_probability);
 }
 
-void create_compressor() {
+void create_compressor(size_t message_size) {
     assert(UPDATE_REGION_SET);
     assert(!COMPRESSOR);
-    COMPRESSOR = boost::make_unique<Compressor>(*UPDATE_REGION_SET);
+    COMPRESSOR = boost::make_unique<Compressor>(*UPDATE_REGION_SET, message_size);
 }
 
 void decompress(const char* token, char* output) {
@@ -75,16 +75,14 @@ void create_random_batch_generator() {
     BATCH_GENERATOR = boost::make_unique<RandomBatchGenerator>(*UPDATE_REGION_SET, *CONTAMINATOR, *COMPRESSOR);
 }
 
-int32_t generate_random_batch_on_one_update_region(int32_t* clean_batch, int32_t* contaminated_batch,
-                                                   size_t message_size, size_t batch_size) {
+int32_t generate_random_batch_on_one_update_region(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size) {
     assert(BATCH_GENERATOR);
-    return BATCH_GENERATOR->generate_random_batch_on_one_ur(clean_batch, contaminated_batch, message_size, batch_size);
+    return BATCH_GENERATOR->generate_random_batch_on_one_ur(clean_batch, contaminated_batch, batch_size);
 }
 
-void generate_random_batch_on_all_update_regions(int32_t* clean_batch, int32_t* contaminated_batch,
-                                                    size_t message_size, size_t batch_size) {
+void generate_random_batch_on_all_update_regions(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size) {
     assert(BATCH_GENERATOR);
-    BATCH_GENERATOR->generate_random_batch_on_all_urs(clean_batch, contaminated_batch, message_size, batch_size);
+    BATCH_GENERATOR->generate_random_batch_on_all_urs(clean_batch, contaminated_batch, batch_size);
 }
 
 } // extern "C"

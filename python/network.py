@@ -7,7 +7,7 @@ import cpp_bindings
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import init_ops
 
-message_size = 30
+message_size = 25
 batch_size = None
 model_file = 'model/model-1/model'
 test_num_iterations = 2500
@@ -44,7 +44,7 @@ class Network(object):
         train_num_correct = 0
         train_num_letters = 0
 
-        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size,
+        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size,
                                                                                        use_one_update_region=False)
 
         with tf.device("/device:GPU:0"):
@@ -66,7 +66,7 @@ class Network(object):
         self.sess.run(initializer)
         while True:
             # update gradient
-            clean, contaminated = cpp_bindings.generate_random_batch(batch_size, message_size,
+            clean, contaminated = cpp_bindings.generate_random_batch(batch_size,
                                                                      use_one_update_region=False)
             _, predictions, l = self.sess.run([optimizer, train_logits, total_loss],
                 feed_dict={ self.clean_tokens:clean, self.contaminated_tokens:contaminated })
@@ -241,10 +241,10 @@ class NetworkAutomata(Network):
 
 class DefaultMistakeCounter(object):
     def __init__(self):
-        probs = []
+        probs = [1] * (message_size + 1)
         with open('model/first-mistake-statistics') as reader:
-            for line in reader:
-                probs.append(float(line))
+            for i, line in enumerate(reader):
+                probs[i] = float(line) + 1
         for i in range(message_size):
             probs[message_size - i - 1] += probs[message_size - i]
         self._logits = [np.log(probs[-1] / p) for p in probs]
@@ -300,73 +300,18 @@ class HypoSearcher(NetworkAutomata):
             elif len(found) < 20:
                 for h in found:
                     if len(h) > message_size: continue
-                    if cpp_bindings.levenstein(h + ' ' * (message_size - len(h)),
-                                               token + ' ' * (message_size - len(token))) < 4:
+                    if cpp_bindings.levenstein(h + ' ' * (100 - len(h)),
+                                               token + ' ' * (100 - len(token))) < 4:
                         print 'found by prefix ', h, '...'
                         return -1
                 return i - 1
-
-
-"""
-class HypoSearcher(NetworkAutomata):
-    def __init__(self):
-        NetworkAutomata.__init__(self)
-
-    def search(self, token, num_attempts=100):
-        attempt = 0
-        prefixes = [(self._default_mistake_counter.get(0), '')]
-        checked_prefixes = []
-        prohibited_prefixes = []
-        number_of_database_requests = 0
-        while len(prefixes) > 0 and attempt < num_attempts:
-            attempt += 1
-            prefix = prefixes[0][1]
-            if len(prefix) > 4:
-                zz_prefix = prefix[0:-1]
-                found_by_prefix = cpp_bindings.find_by_prefix(zz_prefix, 20)
-                number_of_database_requests += 1
-                if len(found_by_prefix) == 0:
-                    prohibited_prefixes.append(zz_prefix)
-                    prefixes = filter(lambda (x, y): not y.startswith(zz_prefix), prefixes)
-                    print 'tried prefix: ', zz_prefix, '... excluded'
-                    continue
-                elif len(found_by_prefix) < 20:
-                    for hypo in found_by_prefix:
-                        if cpp_bindings.levenstein(hypo + ' ' * (message_size - len(hypo)),
-                                                   token + ' ' * (message_size - len(token)))< 4:
-                            print 'found by prefix ', zz_prefix, ': ', hypo, '...'
-                            print 'number of database requests: ', number_of_database_requests
-                            return
-                    print 'tried prefix: ', zz_prefix, '... excluded'
-                else:
-                    print 'tried prefix: ', zz_prefix, '... accepted'
-            probs = self.encode(token)
-            for i in range(message_size):
-                letter = prefix[i] if i < len(prefix) else self.get_best_char(probs)
-                probs = self.apply(letter)
-            best_hypo =  self.get_best_hypo()
-            print 'trying hypo "' + best_hypo.strip() + '" ...'
-            decompressed = cpp_bindings.decompress(best_hypo)
-            number_of_database_requests += 1
-            if len(decompressed) > 0:
-                print 'found something: ', decompressed, '...'
-                print 'number of database requests: ', number_of_database_requests
-                return
-            else:
-                checked_prefixes.append(prefix)
-                prefixes.extend(self.get_alternatives())
-                prefixes = sorted(prefixes, key=lambda (x, y): -x)
-                prefixes = filter(lambda (x, y): not y in checked_prefixes, prefixes)
-                for prefix in prohibited_prefixes:
-                    prefixes = filter(lambda (x, y): not y.startswith(prefix), prefixes)
-"""
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test'])
     parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
-    parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=30)
+    parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=512)
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
@@ -376,7 +321,7 @@ if __name__ == '__main__':
     model_file = args.model_file
     model_file = model_file if not model_file is None else 'model/model-1/model'
 
-    cpp_bindings.generate_cpp_bindings(args.input_folder, args.mistake_probability)
+    cpp_bindings.generate_cpp_bindings(args.input_folder, args.mistake_probability, args.message_size)
 
     if args.command == 'train':
         network = Network()
@@ -390,7 +335,7 @@ if __name__ == '__main__':
     elif args.command == 'test':
         first_mistake_statistics = np.zeros(message_size + 1)
         automata = NetworkAutomata()
-        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size, message_size,
+        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size,
                                                                                        use_one_update_region=False)
         for _ in range(test_batch_size):
             if _ % 100 == 0: print _
@@ -405,8 +350,8 @@ if __name__ == '__main__':
                 if i + 1 == message_size:
                     first_mistake_statistics[-1] += 1
                 probs = automata.apply(letter)
-            with open('model/first-mistake-statistics', 'w') as writer:
-                writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
+        with open('model/first-mistake-statistics', 'w') as writer:
+            writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
     else:
         raise ValueError(args.command)
 

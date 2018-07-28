@@ -13,7 +13,8 @@
 
 #include "update-regions.h"
 
-Compressor::Compressor(const UpdateRegionSet& update_region_set) {
+Compressor::Compressor(const UpdateRegionSet& update_region_set, size_t message_size)
+    : message_size(message_size) {
     for (const UpdateRegion& update_region : update_region_set.update_regions) {
         for (const std::string& token : update_region.tokens) {
             decompress_map[compress(token)].push_back(token);
@@ -36,7 +37,6 @@ std::string Compressor::compress(const std::string& token) const {
     std::string compressed(token);
     std::replace(compressed.begin(), compressed.end(), 'c', 'k');
     std::replace(compressed.begin(), compressed.end(), 'w', 'v');
-    std::replace(compressed.begin(), compressed.end(), 'e', 'i');
 
     if (compressed.empty()) {
         return compressed;
@@ -46,6 +46,9 @@ std::string Compressor::compress(const std::string& token) const {
         if (compressed[i] != compressed[i - 1]) {
             to_return += compressed[i];
         }
+    }
+    if (to_return.length() > message_size) {
+        to_return = to_return.substr(0, message_size);
     }
     return to_return;
 }
@@ -67,4 +70,8 @@ std::vector<std::string> Compressor::find_by_prefix(const std::string& prefix, s
         ++found;
     }
     return results;
+}
+
+size_t Compressor::get_message_size() const {
+    return message_size;
 }

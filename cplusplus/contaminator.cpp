@@ -43,8 +43,8 @@ const std::vector<char> ALHABET = {
 
 } // anonymous namespace
 
-Contaminator::Contaminator(double mistake_probability): mistake_probability(mistake_probability)
-                                        , generator(1) {
+Contaminator::Contaminator(const std::string& ngrams_file, double mistake_probability)
+    : ngrams(ngrams_file), mistake_probability(mistake_probability), generator(1) {
 }
 
 std::string Contaminator::swap_random_chars(const std::string& token) const {
@@ -62,7 +62,7 @@ std::string Contaminator::replace_random_char(const std::string& token) const {
     }
     std::uniform_int_distribution<size_t> distribution(0, token.size() - 1);
     size_t index = distribution(generator);
-    return token.substr(0, index) + get_random_char() + token.substr(index + 1);
+    return token.substr(0, index) + get_random_qwerty_neighbour(token[index], true) + token.substr(index + 1);
 }
 
 std::string Contaminator::add_random_char(const std::string& token) const {
@@ -72,9 +72,9 @@ std::string Contaminator::add_random_char(const std::string& token) const {
     std::uniform_int_distribution<size_t> distribution(0, token.size());
     size_t index = distribution(generator);
     if (index == token.size()) {
-        return token + get_random_char();
+        return token + get_random_qwerty_neighbour(token.back(), true);
     }
-    return token.substr(0, index) + get_random_char() + token.substr(index);
+    return token.substr(0, index) + get_random_qwerty_neighbour(token[index], true) + token.substr(index);
 }
 
 std::string Contaminator::remove_random_char(const std::string& token) const {
@@ -84,11 +84,15 @@ std::string Contaminator::remove_random_char(const std::string& token) const {
 }
 
 std::string Contaminator::contaminate(const std::string& token) const {
+    size_t mistake_counter = 0;
     std::bernoulli_distribution contaminate_distribution(mistake_probability);
     std::uniform_int_distribution<int> distribution(0, 3);
     std::string contaminated_token = token;
     for (size_t i = 0; i < token.size(); ++i) {
         if (contaminate_distribution(generator)) {
+            if (++mistake_counter == 3) { // no more than 3 mistakes per token
+                break;
+            }
             int type = distribution(generator);
             switch (type) {
                 case 0:
@@ -110,6 +114,37 @@ std::string Contaminator::contaminate(const std::string& token) const {
 }
 
 // helpers
+
+char Contaminator::get_random_char(const std::string& token, size_t index) {
+    std::discrete_distribution<int> type_distribution({ 0.45, 0.45, 0.1});
+    int type = type_distribution(generator);
+    switch(type) {
+    case 0:
+    {
+        // ngrams
+        std::string prefix;
+        if (index < ngrams.size()) {
+            prefix = std::string(' ', ngrams.size() - index);
+            prefix += token.substr(0, index);
+        } else {
+            prefix = token.substr(index - ngrams.size(), ngrams.size());
+        }
+        const std::vector<double>& probs = ngrams.get_probabities(prefix);
+        if (!probs.empty()) {
+            std::discrete_distribution<int> char_distribution(probs.begin(), probs.end());
+            int index = char_distribution(generator);
+            return to_char(index);
+        }
+    }
+    case 1:
+        // qwerty
+        return get_random_qwerty_neighbour(index == token.length() ? token.back() : token[index], true);
+        // random
+    case 2:
+        return get_random_char();
+    }
+    throw std::runtime_error("get_random_char error");
+}
 
 char Contaminator::get_random_qwerty_neighbour(char letter, bool allow_repeat) const {
     const std::vector<char>& neighbours = QWERTY_MAP.at(letter);

@@ -1,10 +1,11 @@
 #include "utils.h"
 
 #include <cassert>
-#include <vector>
-
-#include <string>
 #include <iostream>
+#include <iterator>
+#include <sstream>
+#include <string>
+#include <vector>
 
 const int32_t A_INT = static_cast<int32_t>('a');
 const int32_t Z_INT = static_cast<int32_t>('z');
@@ -36,6 +37,22 @@ std::string clean_token(const std::string& token) {
         }
     }
     return cleaned;
+}
+
+
+template<typename Out>
+void split(const std::string &s, char delim, Out result) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        *(result++) = item;
+    }
+}
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, std::back_inserter(elems));
+    return elems;
 }
 
 extern "C" {

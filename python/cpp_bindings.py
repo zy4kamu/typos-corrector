@@ -6,14 +6,13 @@ _library = ctypes.cdll.LoadLibrary('../build/libpython-bindings.so')
 MESSAGE_SIZE = None
 
 
-def generate_cpp_bindings(#ngrams_file='model/ngrams',
-        update_regions_folder='model/update-regions', mistake_probability=0.2, message_size=15):
+def generate_cpp_bindings(ngrams_file='model/ngrams', update_regions_folder='model/update-regions',
+                          mistake_probability=0.2, message_size=15):
     global MESSAGE_SIZE
     MESSAGE_SIZE = message_size
     _set_update_regions_folder(update_regions_folder)
     _create_update_regions_set()
-    _create_contaminator(#ctypes.c_char_p(ngrams_file),
-        mistake_probability)
+    _create_contaminator(ngrams_file, mistake_probability)
     _create_compressor(message_size)
     _create_random_batch_generator()
 
@@ -70,8 +69,8 @@ def _create_update_regions_set():
     _library.create_update_regions_set()
 
 
-def _create_contaminator(mistake_probability):
-    _library.create_contaminator(ctypes.c_double(mistake_probability))
+def _create_contaminator(ngrams_file, mistake_probability):
+    _library.create_contaminator(ctypes.c_char_p(ngrams_file), ctypes.c_double(mistake_probability))
 
 
 def _create_compressor(message_size):

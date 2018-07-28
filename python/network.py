@@ -314,6 +314,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=512)
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
+    parser.add_argument('-n', '--ngrams-file',         type=str,   help='file with ngrams model',        default='model/ngrams')
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
     args = parser.parse_args()
     message_size = args.message_size
@@ -321,7 +322,10 @@ if __name__ == '__main__':
     model_file = args.model_file
     model_file = model_file if not model_file is None else 'model/model-1/model'
 
-    cpp_bindings.generate_cpp_bindings(args.input_folder, args.mistake_probability, args.message_size)
+    cpp_bindings.generate_cpp_bindings(ngrams_file=args.ngrams_file,
+                                       update_regions_folder=args.input_folder,
+                                       mistake_probability=args.mistake_probability,
+                                       message_size=args.message_size)
 
     if args.command == 'train':
         network = Network()

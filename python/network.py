@@ -252,6 +252,7 @@ class DefaultMistakeCounter(object):
     def get(self, position):
         return self._logits[position]
 
+# TODO: Algorithm is not perfect, it can check the same hypo muttiple times
 class HypoSearcher(NetworkAutomata):
     def __init__(self):
         NetworkAutomata.__init__(self)
@@ -298,12 +299,18 @@ class HypoSearcher(NetworkAutomata):
             if len(found) == 0:
                 return i - 1
             elif len(found) < 20:
+                best_hypos = []
+                best_levenstein = 4
                 for h in found:
-                    if len(h) > message_size: continue
-                    if cpp_bindings.levenstein(h + ' ' * (100 - len(h)),
-                                               token + ' ' * (100 - len(token))) < 4:
-                        print 'found by prefix ', h, '...'
-                        return -1
+                    new_levenstein = cpp_bindings.levenstein(h + ' ' * (100 - len(h)), token + ' ' * (100 - len(token)))
+                    if new_levenstein < best_levenstein:
+                        best_hypos = [h]
+                        best_levenstein = new_levenstein
+                    elif new_levenstein == best_levenstein:
+                        best_hypos.append(h)
+                if len(best_hypos) > 0:
+                    print 'found by prefix:', ', '.join(best_hypos), '...'
+                    return -1
                 return i - 1
 
 

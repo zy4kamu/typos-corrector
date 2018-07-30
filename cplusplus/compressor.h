@@ -4,7 +4,7 @@
 #include <map>
 #include <vector>
 
-class UpdateRegionSet;
+struct UpdateRegionSet;
 
 class Compressor {
 public:

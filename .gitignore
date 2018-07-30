@@ -6,3 +6,4 @@ build/
 corpus
 dataset
 cplusplus-build
+python/message_pb2.py

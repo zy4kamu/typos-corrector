@@ -269,11 +269,12 @@ class HypoSearcher(NetworkAutomata):
             hypo, decompressed = self.__get_hypos_from_prefix(token, prefix)
             if len(decompressed) > 0:
                 print 'found something: ', decompressed, '...'
-                return
+                return '|'.join(decompressed)
 
             # 2. find max coincided prefix from hypo
             max_coincided_length = self.__get_max_coincided_prefix(token, hypo)
-            if max_coincided_length == -1: return
+            if max_coincided_length == -1:
+                return
 
             # 3. add hypos
             prefixes.extend(self.get_alternatives())

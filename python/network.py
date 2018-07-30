@@ -252,6 +252,7 @@ class DefaultMistakeCounter(object):
     def get(self, position):
         return self._logits[position]
 
+# TODO: Algorithm is not perfect, it can check the same hypo muttiple times
 class HypoSearcher(NetworkAutomata):
     def __init__(self):
         NetworkAutomata.__init__(self)
@@ -299,12 +300,18 @@ class HypoSearcher(NetworkAutomata):
             if len(found) == 0:
                 return i - 1
             elif len(found) < 20:
+                best_hypos = []
+                best_levenstein = 4
                 for h in found:
-                    if len(h) > message_size: continue
-                    if cpp_bindings.levenstein(h + ' ' * (100 - len(h)),
-                                               token + ' ' * (100 - len(token))) < 4:
-                        print 'found by prefix ', h, '...'
-                        return -1
+                    new_levenstein = cpp_bindings.levenstein(h + ' ' * (100 - len(h)), token + ' ' * (100 - len(token)))
+                    if new_levenstein < best_levenstein:
+                        best_hypos = [h]
+                        best_levenstein = new_levenstein
+                    elif new_levenstein == best_levenstein:
+                        best_hypos.append(h)
+                if len(best_hypos) > 0:
+                    print 'found by prefix:', ', '.join(best_hypos), '...'
+                    return -1
                 return i - 1
 
 
@@ -315,6 +322,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=512)
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
+    parser.add_argument('-n', '--ngrams-file',         type=str,   help='file with ngrams model',        default='model/ngrams')
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
     args = parser.parse_args()
     message_size = args.message_size
@@ -322,7 +330,10 @@ if __name__ == '__main__':
     model_file = args.model_file
     model_file = model_file if not model_file is None else 'model/model-1/model'
 
-    cpp_bindings.generate_cpp_bindings(args.input_folder, args.mistake_probability, args.message_size)
+    cpp_bindings.generate_cpp_bindings(ngrams_file=args.ngrams_file,
+                                       update_regions_folder=args.input_folder,
+                                       mistake_probability=args.mistake_probability,
+                                       message_size=args.message_size)
 
     if args.command == 'train':
         network = Network()

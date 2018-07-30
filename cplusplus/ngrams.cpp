@@ -33,7 +33,7 @@ Ngrams::Ngrams(const std::string& input_file): ngram_size(0) {
     }
 }
 
-const std::vector<double>& Ngrams::get_probabities(const std::string& ngram) {
+const std::vector<double>& Ngrams::get_probabities(const std::string& ngram) const {
     assert(ngram.length() == ngram_size);
     auto found = transition_probs.find(ngram);
     if (found != transition_probs.end()) {

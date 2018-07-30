@@ -16,7 +16,7 @@ public:
 private:
     char get_random_qwerty_neighbour(char letter, bool allow_repeat) const;
     char get_random_char() const;
-    char get_random_char(const std::string& token, size_t index);
+    char get_random_char(const std::string& token, size_t index) const;
 
     Ngrams ngrams;
     const double mistake_probability;

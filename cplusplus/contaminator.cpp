@@ -5,8 +5,7 @@
 
 namespace {
 
-const std::unordered_map<char, std::vector<char>> QWERTY_MAP =
-{
+const std::unordered_map<char, std::vector<char>> QWERTY_MAP = {
     {'q', {'a', 'w', 's'}},
     {'w', {'q', 'a', 's', 'd', 'e'}},
     {'e', {'w', 's', 'd', 'f', 'r'}},
@@ -62,7 +61,7 @@ std::string Contaminator::replace_random_char(const std::string& token) const {
     }
     std::uniform_int_distribution<size_t> distribution(0, token.size() - 1);
     size_t index = distribution(generator);
-    return token.substr(0, index) + get_random_qwerty_neighbour(token[index], true) + token.substr(index + 1);
+    return token.substr(0, index) + get_random_char(token, index) + token.substr(index + 1);
 }
 
 std::string Contaminator::add_random_char(const std::string& token) const {
@@ -71,10 +70,7 @@ std::string Contaminator::add_random_char(const std::string& token) const {
     }
     std::uniform_int_distribution<size_t> distribution(0, token.size());
     size_t index = distribution(generator);
-    if (index == token.size()) {
-        return token + get_random_qwerty_neighbour(token.back(), true);
-    }
-    return token.substr(0, index) + get_random_qwerty_neighbour(token[index], true) + token.substr(index);
+    return token.substr(0, index) + get_random_char(token, index) + token.substr(index);
 }
 
 std::string Contaminator::remove_random_char(const std::string& token) const {
@@ -115,7 +111,7 @@ std::string Contaminator::contaminate(const std::string& token) const {
 
 // helpers
 
-char Contaminator::get_random_char(const std::string& token, size_t index) {
+char Contaminator::get_random_char(const std::string& token, size_t index) const {
     std::discrete_distribution<int> type_distribution({ 0.45, 0.45, 0.1});
     int type = type_distribution(generator);
     switch(type) {
@@ -124,7 +120,7 @@ char Contaminator::get_random_char(const std::string& token, size_t index) {
         // ngrams
         std::string prefix;
         if (index < ngrams.size()) {
-            prefix = std::string(' ', ngrams.size() - index);
+            prefix = std::string(ngrams.size() - index, ' ');
             prefix += token.substr(0, index);
         } else {
             prefix = token.substr(index - ngrams.size(), ngrams.size());

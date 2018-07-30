@@ -1,7 +1,7 @@
 import numpy as np
 import ctypes
 
-library = ctypes.cdll.LoadLibrary('../build/libbatch-generator.so')
+library = ctypes.cdll.LoadLibrary('../build/libpython-bindings.so')
 
 A_INT = np.int32(ord('a'))
 Z_INT = np.int32(ord('z'))

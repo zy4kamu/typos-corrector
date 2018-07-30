@@ -5,10 +5,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-class Talker
+class NetworkTalker
 {
 public:
-  Talker(uint16_t send_port = 5555, uint16_t receive_port = 5556) {
+  NetworkTalker(uint16_t send_port = 5555, uint16_t receive_port = 5556) {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
     sender_addr.sin_family = AF_INET;
     inet_aton("127.0.0.1", &sender_addr.sin_addr);
@@ -20,7 +20,9 @@ public:
     receiver_addr.sin_port = htons(receive_port);
     receiver_socket = socket(AF_INET, SOCK_DGRAM, 0);
     int result = bind(receiver_socket, reinterpret_cast<struct sockaddr*>(&receiver_addr), sizeof(receiver_addr));
-    assert(result >= 0);
+    if (result < 0) {
+      std::cerr << "NetworkTalker couldn't bind receiver socket" << std::endl;
+    }
   }
 
   std::string process(const std::string& token) {
@@ -56,6 +58,11 @@ private:
 
 int main()
 {
-  Talker talker;
-  std::cout << talker.process("masterdamweg");
+  NetworkTalker talker;
+  while (true) {
+    std::cout << "Input somehing: ";
+    std::string contaminated_token;
+    std::getline(std::cin, contaminated_token);
+    std::cout << talker.process(contaminated_token) << std::endl << std::endl;
+  }
 }

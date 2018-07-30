@@ -10,20 +10,20 @@ class ProtobufTalker(object):
         self.__receive_sock.bind((LOCALHOST, receive_port))
         self.__send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    def communicate(self):
-        while True:
-            received_bytes, _ = self.__receive_sock.recvfrom(MESSAGE_SIZE)
-            contaminated_token = message_pb2.ContaminatedToken()
-            contaminated_token.ParseFromString(received_bytes)
+    def receive(self):
+        received_bytes, _ = self.__receive_sock.recvfrom(MESSAGE_SIZE)
+        contaminated_token = message_pb2.ContaminatedToken()
+        contaminated_token.ParseFromString(received_bytes)
+        return str(contaminated_token.content)
 
-            cleaned_hypo = message_pb2.CleanedHypo()
-            cleaned_hypo.content = self.__process_contaminated_token(contaminated_token.content)
-            bytes_to_send = cleaned_hypo.SerializeToString()
-            self.__send_sock.sendto(bytes_to_send, ("127.0.0.1", 5556))
-
-    def __process_contaminated_token(self, token):
-        return token + "1234"
+    def send(self, to_send):
+        cleaned_hypo = message_pb2.CleanedHypo()
+        cleaned_hypo.content = to_send
+        bytes_to_send = cleaned_hypo.SerializeToString()
+        self.__send_sock.sendto(bytes_to_send, ("127.0.0.1", 5556))
 
 if __name__ == "__main__":
     talker = ProtobufTalker()
-    talker.communicate()
+    while True:
+        received = talker.receive()
+        talker.send(received + "1234")

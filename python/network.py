@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 import utils
 import cpp_bindings
+import protobuf_talker
 
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import init_ops
@@ -273,9 +274,10 @@ class HypoSearcher(NetworkAutomata):
                 return '|'.join(decompressed)
 
             # 2. find max coincided prefix from hypo
-            max_coincided_length = self.__get_max_coincided_prefix(token, hypo)
-            if max_coincided_length == -1:
-                return
+            max_coincided_length, best_hypos = self.__get_max_coincided_prefix(token, hypo)
+            if len(best_hypos) > 0:
+                print 'found by prefix: ', best_hypos, '...'
+                return '|'.join(best_hypos)
 
             # 3. add hypos
             prefixes.extend(self.get_alternatives())
@@ -283,6 +285,7 @@ class HypoSearcher(NetworkAutomata):
             checked_prefixes.append(prefix)
             prefixes = filter(lambda (x, y): not y in checked_prefixes, prefixes)
             prefixes = sorted(prefixes, key=lambda (x, y): -x)
+        return ''
 
     def __get_hypos_from_prefix(self, token, prefix):
         probs = self.encode(token)
@@ -298,7 +301,7 @@ class HypoSearcher(NetworkAutomata):
         for i in range(1, len(hypo)):
             found = cpp_bindings.find_by_prefix(hypo[0:i], 20)
             if len(found) == 0:
-                return i - 1
+                return i - 1, []
             elif len(found) < 20:
                 best_hypos = []
                 best_levenstein = 4
@@ -310,14 +313,13 @@ class HypoSearcher(NetworkAutomata):
                     elif new_levenstein == best_levenstein:
                         best_hypos.append(h)
                 if len(best_hypos) > 0:
-                    print 'found by prefix:', ', '.join(best_hypos), '...'
-                    return -1
-                return i - 1
+                    return -1, best_hypos
+                return i - 1, []
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
-    parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test'])
+    parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test', 'listen'])
     parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=512)
@@ -364,6 +366,14 @@ if __name__ == '__main__':
                 probs = automata.apply(letter)
         with open('model/first-mistake-statistics', 'w') as writer:
             writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
+    elif args.command == 'listen':
+        hypo_searcher = HypoSearcher()
+        communicator = protobuf_talker.ProtobufTalker()
+        print 'listening ...'
+        while True:
+            received = communicator.receive()
+            to_send = hypo_searcher.search(received)
+            communicator.send(to_send)
     else:
         raise ValueError(args.command)
 

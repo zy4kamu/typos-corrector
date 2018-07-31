@@ -298,6 +298,9 @@ class HypoSearcher(NetworkAutomata):
         return best_hypo, decompressed
 
     def __get_max_coincided_prefix(self, token, hypo):
+        hypo = hypo.strip()
+        if len(hypo) == 0:
+            return 0, []
         for i in range(1, len(hypo)):
             found = cpp_bindings.find_by_prefix(hypo[0:i], 20)
             if len(found) == 0:
@@ -315,6 +318,7 @@ class HypoSearcher(NetworkAutomata):
                 if len(best_hypos) > 0:
                     return -1, best_hypos
                 return i - 1, []
+        return len(hypo) - 1, []
 
 
 if __name__ == '__main__':

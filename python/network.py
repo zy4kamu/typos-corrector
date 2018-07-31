@@ -348,21 +348,30 @@ if __name__ == '__main__':
         automata = NetworkAutomata()
         clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size,
                                                                                        use_one_update_region=False)
+        num_correct_chars = 0
+        num_all_chars = 0
         for _ in range(test_batch_size):
             if _ % 100 == 0: print _
+            made_mistake = False
             clean_token = utils.numpy_to_string(clean_test_batch[_, :])
             contaminated_token = utils.numpy_to_string(contaminated_test_batch[_, :])
             probs = automata.encode(contaminated_token)
+            num_all_chars += message_size
             for i in range(message_size):
                 letter = automata.get_best_char(probs)
                 if letter != clean_token[i]:
-                    first_mistake_statistics[i] += 1
-                    break
-                if i + 1 == message_size:
-                    first_mistake_statistics[-1] += 1
+                    if not made_mistake:
+                        made_mistake = True
+                        first_mistake_statistics[i] += 1
+                else:
+                    num_correct_chars += 1
+                    if i + 1 == message_size:
+                        first_mistake_statistics[-1] += 1
                 probs = automata.apply(letter)
         with open('model/first-mistake-statistics', 'w') as writer:
             writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
+        print '{} correct of {}; accuracy = {}'.format(num_correct_chars, num_all_chars,
+                                                       float(num_correct_chars) / float(num_all_chars))
     else:
         raise ValueError(args.command)
 

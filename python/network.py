@@ -373,6 +373,8 @@ def basic_productivity_check():
     check('borney bas', 'bornay bas')
     check('bordehaute', 'borde haute')
     check('bulervar augusting', 'boulevard augustin')
+    check('piethenkade', 'piet henkade')
+    check('hbbemstraat', 'hobbemastraat')
 
 
 if __name__ == '__main__':

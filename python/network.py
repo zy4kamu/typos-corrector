@@ -255,10 +255,15 @@ class DefaultMistakeCounter(object):
 
 # TODO: Algorithm is not perfect, it can check the same hypo muttiple times
 class HypoSearcher(NetworkAutomata):
-    def __init__(self):
+    def __init__(self, verbose=True):
         NetworkAutomata.__init__(self)
+        self.verbose = verbose
 
     def search(self, token, num_attempts=100):
+        if len(token) > message_size:
+            token = token[0:message_size]
+        if self.verbose:
+            print '\n\nsearching for ', token, '...'
         attempt = 0
         prefixes = [(self._default_mistake_counter.get(0), '')]
         checked_prefixes = []
@@ -270,13 +275,15 @@ class HypoSearcher(NetworkAutomata):
             # 1. check if there is a good match by default
             hypo, decompressed = self.__get_hypos_from_prefix(token, prefix)
             if len(decompressed) > 0:
-                print 'found something: ', decompressed, '...'
+                if self.verbose:
+                    print 'found something: ', decompressed, '...'
                 return '|'.join(decompressed)
 
             # 2. find max coincided prefix from hypo
             max_coincided_length, best_hypos = self.__get_max_coincided_prefix(token, hypo)
             if len(best_hypos) > 0:
-                print 'found by prefix: ', best_hypos, '...'
+                if self.verbose:
+                    print 'found by prefix: ', best_hypos, '...'
                 return '|'.join(best_hypos)
 
             # 3. add hypos
@@ -293,7 +300,8 @@ class HypoSearcher(NetworkAutomata):
             letter = prefix[i] if i < len(prefix) else self.get_best_char(probs)
             probs = self.apply(letter)
         best_hypo =  self.get_best_hypo()
-        print 'trying hypo "' + best_hypo.strip() + '" ...'
+        if self.verbose:
+            print 'trying hypo "' + best_hypo.strip() + '" ...'
         decompressed = cpp_bindings.decompress(best_hypo)
         return best_hypo, decompressed
 
@@ -321,9 +329,55 @@ class HypoSearcher(NetworkAutomata):
         return len(hypo) - 1, []
 
 
+counter = 0
+mistake_counter = 0
+def basic_productivity_check():
+    hypo_searcher = HypoSearcher(verbose=False)
+    def check(input, expected_output):
+        global counter, mistake_counter
+        hypos = hypo_searcher.search(input)
+        passed = expected_output in hypos
+        found_something_else =  len(hypos) > 0
+        counter += 1
+        if not passed: mistake_counter += 1
+        to_print = input + ' -> ' + expected_output
+        to_print += ' ' * (60 - len(to_print))
+        print to_print, 'PASSED' if passed else 'SMTH ELSE' if found_something_else else 'FAILED', '...'
+
+    check('bridcage walk', 'bridge walk')
+    check('krelist louwenstraat', 'krelis louwenstraat')
+    check('kfkastrasse', 'kafkastrasse')
+    check('bkerstreet', 'baker street')
+    check('viaarno', 'via arno')
+    check('ia arno', 'via arno')
+    check('oosterkstraat', 'oosterstraat')
+    check('oosterkstraat', 'oosterstraat')
+    check('alae cresei', 'alea cresei')
+    check('aleacresei', 'alea cresei')
+    check('aleacresei', 'alea cresei')
+    check('bulvardul erorol', 'bulevardul eroilor')
+    check('bulevardulerolor', 'bulevardul eroilor')
+    check('bulvardul eroilor', 'bulevardul eroilor')
+    check('piatata abator', 'piata abator')
+    check('piattaabator', 'piata abator')
+    check('strade amman', 'strada amman')
+    check('stradedridu', 'strada dridu')
+    check('strade zgravi', 'strada zugravi')
+    check('strada tejen', 'strada teajen')
+    check('arodrome', 'aerodrome')
+    check('are du beau marais', 'aire du beau marais')
+    check('are dubeau marais', 'aire du beau marais')
+    check('airee du graier', 'aire du granier')
+    check('biae des trepasses', 'baie des trepasses')
+    check('bosnet', 'boisnet')
+    check('borney bas', 'bornay bas')
+    check('bordehaute', 'borde haute')
+    check('bulervar augusting', 'boulevard augustin')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
-    parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test', 'listen'])
+    parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test', 'listen', 'check'])
     parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=512)
@@ -371,13 +425,19 @@ if __name__ == '__main__':
         with open('model/first-mistake-statistics', 'w') as writer:
             writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
     elif args.command == 'listen':
-        hypo_searcher = HypoSearcher()
-        communicator = protobuf_talker.ProtobufTalker()
-        print 'listening ...'
         while True:
-            received = communicator.receive()
-            to_send = hypo_searcher.search(received)
-            communicator.send(to_send)
+            try:
+                hypo_searcher = HypoSearcher()
+                communicator = protobuf_talker.ProtobufTalker()
+                print 'listening ...'
+                while True:
+                    received = communicator.receive()
+                    to_send = hypo_searcher.search(received)
+                    communicator.send(to_send)
+            except:
+                print 'Exception happened, restarting ...'
+    elif args.command == 'check':
+        basic_productivity_check()
     else:
         raise ValueError(args.command)
 

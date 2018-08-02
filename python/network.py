@@ -427,17 +427,13 @@ if __name__ == '__main__':
         with open('model/first-mistake-statistics', 'w') as writer:
             writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
     elif args.command == 'listen':
+        hypo_searcher = HypoSearcher()
+        communicator = protobuf_talker.ProtobufTalker()
+        print 'listening ...'
         while True:
-            try:
-                hypo_searcher = HypoSearcher()
-                communicator = protobuf_talker.ProtobufTalker()
-                print 'listening ...'
-                while True:
-                    received = communicator.receive()
-                    to_send = hypo_searcher.search(received)
-                    communicator.send(to_send)
-            except:
-                print 'Exception happened, restarting ...'
+            address, received = communicator.receive()
+            to_send = hypo_searcher.search(received)
+            communicator.send(address, to_send)
     elif args.command == 'check':
         basic_productivity_check()
     else:

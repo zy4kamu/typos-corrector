@@ -259,7 +259,7 @@ class HypoSearcher(NetworkAutomata):
         NetworkAutomata.__init__(self)
         self.verbose = verbose
 
-    def search(self, token, num_attempts=100):
+    def search(self, token, num_attempts=100, protobuf_talker=None, address=None):
         if len(token) > message_size:
             token = token[0:message_size]
         if self.verbose:
@@ -269,6 +269,13 @@ class HypoSearcher(NetworkAutomata):
         checked_prefixes = []
 
         while len(prefixes) > 0 and attempt < num_attempts:
+            if not protobuf_talker is None:
+                protobuf_talker.send(address, '?')
+                _, status = protobuf_talker.receive()
+                if status != 'y':
+                    print 'stopped ...'
+                    return '--stopped--'
+
             attempt += 1
             prefix = prefixes[0][1]
 
@@ -432,8 +439,9 @@ if __name__ == '__main__':
         print 'listening ...'
         while True:
             address, received = communicator.receive()
-            to_send = hypo_searcher.search(received)
-            communicator.send(address, to_send)
+            to_send = hypo_searcher.search(received, protobuf_talker=communicator, address=address)
+            if to_send != '--stopped--':
+                communicator.send(address, to_send)
     elif args.command == 'check':
         basic_productivity_check()
     else:

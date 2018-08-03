@@ -13,3 +13,8 @@ endif ()
 
 add_library(python-bindings SHARED contaminator.cpp random-batch-generator.cpp compressor.cpp update-regions.cpp python-bindings.cpp utils.cpp ngrams.cpp)
 target_link_libraries(python-bindings boost_filesystem boost_system)
+
+add_subdirectory(proto)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+add_executable(network-talker network-talker.cpp)
+target_link_libraries(network-talker proto protobuf)

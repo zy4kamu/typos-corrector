@@ -382,6 +382,17 @@ def basic_productivity_check():
     check('bulervar augusting', 'boulevard augustin')
     check('piethenkade', 'piet henkade')
     check('hbbemstraat', 'hobbemastraat')
+    check('ituinstraat', 'tuinstraat')
+    check('hemtsederstaat', 'heemstedestraat')
+    check('heemtsederstaat', 'heemstedestraat')
+    check('bashsignel', 'bachsingel')
+    check('sprotslaan', 'sportlaan')
+    check('erprisweg', 'ereprijsweg')
+    check('halkestraasse', 'halkettstasse')
+    check('calle via limt', 'calle via limite')
+    check('callevia limit', 'calle via limite')
+    check('kanstraasse', 'kaanstrasse')
+    check('navanrod', 'navan road')
 
 
 if __name__ == '__main__':

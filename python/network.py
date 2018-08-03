@@ -26,8 +26,8 @@ class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
                              % inputs_shape)
         input_depth = inputs_shape[1].value
         h_depth = self._num_units
-        self._left_matrix = self.add_variable("left_matrix", shape=[input_depth + h_depth, 64])
-        self._right_matrix = self.add_variable("right_matrix", shape=[64, 4 * self._num_units])
+        self._left_matrix = self.add_variable("left_matrix", shape=[input_depth + h_depth, 128])
+        self._right_matrix = self.add_variable("right_matrix", shape=[128, 4 * self._num_units])
         self._kernel = math_ops.mat_mul(self._left_matrix, self._right_matrix)
         self._bias = self.add_variable("bias",shape=[4 * self._num_units],
                                        initializer=init_ops.zeros_initializer(dtype=self.dtype))
@@ -127,8 +127,8 @@ class Network(object):
             self.char_embedding_matrix = tf.Variable(tf.random_uniform([utils.NUM_SYMBOLS, utils.NUM_SYMBOLS], -1.0, 1.0))
             self.contaminated_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.contaminated_tokens)
 
-            self.encode_lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
-            self.decode_lstm = tf.contrib.rnn.BasicLSTMCell(lstm_size)
+            self.encode_lstm = CompressedLSTM(lstm_size)
+            self.decode_lstm = CompressedLSTM(lstm_size)
             self.hidden_layer_weights = tf.Variable(tf.truncated_normal([lstm_size, utils.NUM_SYMBOLS]))
             self.hidden_layer_bias  = tf.Variable(tf.truncated_normal([utils.NUM_SYMBOLS]))
 
@@ -319,7 +319,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test'])
     parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
-    parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=512)
+    parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
     parser.add_argument('-n', '--ngrams-file',         type=str,   help='file with ngrams model',        default='model/ngrams')
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)

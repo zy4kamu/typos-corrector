@@ -1,0 +1,9 @@
+package TypoCorrector;
+
+message ContaminatedToken {
+  required string content = 1;
+}
+
+message CleanedHypo {
+  required string content = 1;
+}

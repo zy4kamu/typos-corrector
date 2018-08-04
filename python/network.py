@@ -36,12 +36,12 @@ class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
 
 class Network(object):
     def __init__(self):
+        self.parametes = {}
         self.sess = tf.Session()
 
-    def train(self):
+    def train(self, restore_parameters_from_file):
         self.__initialize_for_training()
         self.__initialize_tensors_for_online_application()
-        counter = 0
         train_num_correct = 0
         train_num_letters = 0
 
@@ -63,32 +63,29 @@ class Network(object):
             total_loss /= message_size
             optimizer = tf.train.AdamOptimizer().minimize(total_loss)
 
-        initializer = tf.global_variables_initializer()
-        self.sess.run(initializer)
+        self.__initialize_parameters_for_save()
+
+        saver = tf.train.Saver()
+        if restore_parameters_from_file:
+            saver.restore(self.sess, model_file)
+            counter = test_num_iterations
+        else:
+            initializer = tf.global_variables_initializer()
+            self.sess.run(initializer)
+            counter = 0
         while True:
-            # update gradient
-            clean, contaminated = cpp_bindings.generate_random_batch(batch_size,
-                                                                     use_one_update_region=False)
-            _, predictions, l = self.sess.run([optimizer, train_logits, total_loss],
-                feed_dict={ self.clean_tokens:clean, self.contaminated_tokens:contaminated })
-
-            # update statistics on train
-            counter += 1
-            print '\r', counter,
-            train_num_letters += batch_size * message_size
-            for i in range(message_size):
-                train_num_correct += np.sum((np.argmax(predictions[i], axis=1) == clean[:, i]))
-
             # make intermediate report
             if counter == test_num_iterations:
                 # print current model
                 print '\r',
-                saver = tf.train.Saver()
                 saver.save(self.sess, model_file)
+
+                # print parameters in numpy format
+                self.save_parameters_to_file()
 
                 # print statistics on train
                 print '\ntrain: {} correct of {}; accuracy = {}'.format(train_num_correct, train_num_letters,
-                                                                        float(train_num_correct) / float(train_num_letters))
+                                                                        float(train_num_correct) / float(train_num_letters + 1))
                 counter = 0
                 train_num_correct = 0
                 train_num_letters = 0
@@ -120,13 +117,54 @@ class Network(object):
                 print 'levenstein: {}'.format(float(sum_levenstein) / float(test_batch_size))
                 print ''
 
+            # update gradient
+            clean, contaminated = cpp_bindings.generate_random_batch(batch_size,
+                                                                     use_one_update_region=False)
+            _, predictions, l = self.sess.run([optimizer, train_logits, total_loss],
+                feed_dict={ self.clean_tokens:clean, self.contaminated_tokens:contaminated })
+
+            # update statistics on train
+            counter += 1
+            print '\r', counter,
+            train_num_letters += batch_size * message_size
+            for i in range(message_size):
+                train_num_correct += np.sum((np.argmax(predictions[i], axis=1) == clean[:, i]))
+
+
+
+    def __initialize_parameters_for_save(self):
+        def add_parameter(tensor, tensor_name):
+            tf.identity(tensor, tensor_name)
+            self.parametes[tensor_name] = tensor
+        add_parameter(self.encode_lstm._left_matrix,  'encode_lstm_left_matrix')
+        add_parameter(self.encode_lstm._right_matrix, 'encode_lstm_right_matrix')
+        add_parameter(self.encode_lstm._bias,         'encode_lstm_bias')
+        add_parameter(self.decode_lstm._left_matrix,  'decode_lstm_left_matrix')
+        add_parameter(self.decode_lstm._right_matrix, 'decode_lstm_right_matrix')
+        add_parameter(self.decode_lstm._bias,         'decode_lstm_bias')
+        add_parameter(self.hidden_layer_weights,      'hidden_layer_weights')
+        add_parameter(self.hidden_layer_bias,         'hidden_layer_bias')
+
+    def __read_parameters_from_file(self):
+        output_folder = 'model/parameters'
+        for name, tensor in self.parametes.iteritems():
+            parameter = np.fromfile(os.path.join(output_folder, name), dtype=np.float32)
+            tf.assign(tensor, parameter.reshape(tensor.shape))
+
+    def save_parameters_to_file(self):
+        output_folder = 'model/parameters'
+        if not os.path.exists(output_folder):
+            os.mkdir(output_folder)
+        for k, v in self.parametes.iteritems():
+            [parameter] = self.sess.run([v], feed_dict={})
+            parameter.tofile(os.path.join(output_folder, k))
+
     def __initialize_for_training(self):
         with tf.device("/device:GPU:0"):
             self.clean_tokens = tf.placeholder(tf.int32, [None, message_size], name='clean_tokens')
             self.contaminated_tokens = tf.placeholder(tf.int32, [None, message_size], name='contaminated_tokens')
 
-            self.char_embedding_matrix = tf.Variable(tf.random_uniform([utils.NUM_SYMBOLS, utils.NUM_SYMBOLS], -1.0, 1.0))
-            self.contaminated_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.contaminated_tokens)
+            self.contaminated_embedding = tf.one_hot(self.contaminated_tokens, utils.NUM_SYMBOLS)
 
             self.encode_lstm = CompressedLSTM(lstm_size)
             self.decode_lstm = CompressedLSTM(lstm_size)
@@ -147,14 +185,14 @@ class Network(object):
         apply_input_state_h = tf.placeholder(dtype=tf.float32, shape=(1, lstm_size), name='apply_input_state_h')
         apply_input_char = tf.placeholder(dtype=np.int32, shape=(1,), name='apply_input_char')
         apply_input_state = tf.contrib.rnn.LSTMStateTuple(apply_input_state_c, apply_input_state_h)
-        apply_input_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, apply_input_char)
+        apply_input_embedding = tf.one_hot(apply_input_char, utils.NUM_SYMBOLS)
         apply_output_logits, apply_output_state = self.decode_lstm(apply_input_embedding, apply_input_state)
         tf.identity(tf.matmul(apply_output_logits, self.hidden_layer_weights) + self.hidden_layer_bias, 'after_apply_logits')
         tf.identity(apply_output_state.c, 'after_apply_state_c')
         tf.identity(apply_output_state.h, 'after_apply_state_h')
 
     def __create_output_logits(self, batch_size):
-        clean_embedding = tf.nn.embedding_lookup(self.char_embedding_matrix, self.clean_tokens)
+        clean_embedding = tf.one_hot(self.clean_tokens, utils.NUM_SYMBOLS)
         logits = []
         state = self.encode_lstm.zero_state(batch_size, tf.float32)
         for i in range(message_size):
@@ -397,7 +435,8 @@ def basic_productivity_check():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
-    parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True, choices=['train', 'play', 'test', 'listen', 'check'])
+    parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
+                        choices=['train', 'continue', 'play', 'test', 'listen', 'check'])
     parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
@@ -417,7 +456,10 @@ if __name__ == '__main__':
 
     if args.command == 'train':
         network = Network()
-        network.train()
+        network.train(restore_parameters_from_file=False)
+    elif args.command == 'continue':
+        network = Network()
+        network.train(restore_parameters_from_file=True)
     elif args.command == 'play':
         hypo_searcher = HypoSearcher()
         while True:

@@ -3,7 +3,7 @@
 #include <cassert>
 #include <fstream>
 
-SumCounter::SumCounter(size_t size, size_t local_size): size(size), local_size(local_size) {
+SumCounter::SumCounter(cl_int size, cl_int local_size): size(size), local_size(local_size) {
     // Get platform
     cl::Platform::get(&platforms);
     assert(platforms.size() > 0);
@@ -34,17 +34,14 @@ SumCounter::SumCounter(size_t size, size_t local_size): size(size), local_size(l
     kernel.setArg(1, size);
 
     queue = cl::CommandQueue(context, device);
-
-    std::vector<cl_int> data(size, 1);
-    int error = queue.enqueueWriteBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_int) * size, data.data());
-    assert(error == 0);
 }
 
 cl_int SumCounter::calculate(const std::vector<cl_int>& data) {
-    assert(data.size() == size);
+    assert(static_cast<cl_int>(data.size()) == size);
     int error = queue.enqueueWriteBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_int) * size, data.data());
     assert(error == 0);
-    //queue.enqueueNDRangeKernel(kernel, 0, size, local_size, NULL);
+    error = queue.enqueueNDRangeKernel(kernel, 0, size, local_size, NULL);
+    assert(error == 0);
     cl_int result = -1;
     error = queue.enqueueReadBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_int), &result);
     assert(error == 0);

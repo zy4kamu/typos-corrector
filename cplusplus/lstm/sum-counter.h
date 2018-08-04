@@ -6,11 +6,11 @@
 
 class SumCounter {
 public:
-    SumCounter(size_t size, size_t local_size = 256);
+    SumCounter(cl_int size, cl_int local_size = 1);
     cl_int calculate(const std::vector<cl_int>& data);
 private:
-    size_t               size;
-    size_t               local_size;
+    cl_int                    size;
+    cl_int                    local_size;
 
     std::vector<cl::Platform> platforms;
     cl::Device                device;

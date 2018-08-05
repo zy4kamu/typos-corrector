@@ -26,24 +26,41 @@ SumCounter::SumCounter(cl_int size, cl_int local_size): size(size), local_size(l
     int error = program.build();
     assert(error == 0);
 
-    // Create kernel
-    device_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(cl_int) * size);
-    kernel = cl::Kernel(program, "calculate_sum", &error);
+    // Create sum_kernel
+    device_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(cl_float) * size);
+    sum_kernel = cl::Kernel(program, "calculate_sum", &error);
     assert(error == 0);
-    kernel.setArg(0, device_buffer);
-    kernel.setArg(1, size);
+    sum_kernel.setArg(0, device_buffer);
+    sum_kernel.setArg(1, size);
+
+    // Create exp_kernel
+    exp_kernel = cl::Kernel(program, "calculate_exp", &error);
+    assert(error == 0);
+    exp_kernel.setArg(0, device_buffer);
+    exp_kernel.setArg(1, size);
 
     queue = cl::CommandQueue(context, device);
 }
 
-cl_int SumCounter::calculate(const std::vector<cl_int>& data) {
-    assert(static_cast<cl_int>(data.size()) == size);
-    int error = queue.enqueueWriteBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_int) * size, data.data());
+cl_float SumCounter::calculate(const std::vector<cl_float>& data) {
+    assert(static_cast<cl_float>(data.size()) == size);
+    int error = queue.enqueueWriteBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * size, data.data());
     assert(error == 0);
-    error = queue.enqueueNDRangeKernel(kernel, 0, size, local_size, NULL);
+    error = queue.enqueueNDRangeKernel(sum_kernel, 0, size, local_size, NULL);
     assert(error == 0);
-    cl_int result = -1;
-    error = queue.enqueueReadBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_int), &result);
+    cl_float result = -1;
+    error = queue.enqueueReadBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float), &result);
     assert(error == 0);
     return result;
+}
+
+std::vector<cl_float>& SumCounter::exp(std::vector<cl_float>& data) {
+    assert(static_cast<cl_float>(data.size()) == size);
+    int error = queue.enqueueWriteBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * size, data.data());
+    assert(error == 0);
+    error = queue.enqueueNDRangeKernel(exp_kernel, 0, size, local_size, NULL);
+    assert(error == 0);
+    error = queue.enqueueReadBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * size, data.data());
+    assert(error == 0);
+    return data;
 }

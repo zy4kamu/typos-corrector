@@ -1,4 +1,4 @@
-__kernel void calculate_sum(__global int* data, int size)
+__kernel void calculate_sum(__global float* data, int size)
 {
     size_t local_id = get_local_id(0);
     size_t global_id = get_global_id(0);
@@ -15,4 +15,10 @@ __kernel void calculate_sum(__global int* data, int size)
             data[0] += data[i];
         }
     }
+}
+
+__kernel void calculate_exp(__global float* data, int size)
+{
+    size_t global_id = get_global_id(0);
+    data[global_id] = exp(data[global_id]);
 }

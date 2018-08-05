@@ -4,6 +4,14 @@ __kernel void calculate_exp(__global float* data, int size)
     data[global_id] = exp(data[global_id]);
 }
 
+__kernel void initialize(__global float* input_and_hidden_buffer, __global float* state_buffer,
+                         int input_size, int lstm_size) 
+{
+    size_t global_id = get_global_id(0);
+    input_and_hidden_buffer[global_id + input_size] = 0;
+    state_buffer[global_id] = 0;
+}
+
 __kernel void lstm_cell(__global float* input_and_hidden_buffer, __global float* state_buffer, 
                         __global float* ijfo_buffer, int input_size, int lstm_size)
 {

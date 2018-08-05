@@ -3,7 +3,7 @@
 #include <iostream>
 
 int main() {
-    LSTMCell counter(27, 1024);
-    std::vector<cl_float> data(1024, 1);
+    LSTMCell counter("/home/stepan/git-repos/typos-corrector/python/model/parameters", 27, 128, 512);
+    std::vector<cl_float> data(512, 1);
     std::cout << counter.exp(data)[0] << std::endl;
 }

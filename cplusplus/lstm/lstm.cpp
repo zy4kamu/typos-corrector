@@ -3,8 +3,8 @@
 #include <cassert>
 #include <fstream>
 
-LSTMCell::LSTMCell(cl_int input_size, cl_int hidden_state_size)
-    : input_size(input_size), hidden_state_size(hidden_state_size) {
+LSTMCell::LSTMCell(cl_int input_size, cl_int lstm_size)
+    : input_size(input_size), lstm_size(lstm_size) {
     // Get platform
     cl::Platform::get(&platforms);
     assert(platforms.size() > 0);
@@ -29,52 +29,61 @@ LSTMCell::LSTMCell(cl_int input_size, cl_int hidden_state_size)
 
     // Create buffers
     input_and_hidden_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                                         sizeof(cl_float) * (input_size + hidden_state_size));
+                                         sizeof(cl_float) * (input_size + lstm_size));
+    state_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(cl_float) * lstm_size);
     matrix_kernel_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                                      4 * sizeof(cl_float) * hidden_state_size * (input_size + hidden_state_size));
+                                      4 * sizeof(cl_float) * lstm_size * (input_size + lstm_size));
     bias_kernel_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                                    4 * sizeof(cl_float) * (input_size + hidden_state_size));
+                                    4 * sizeof(cl_float) * (input_size + lstm_size));
     ijfo_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                      4 * sizeof(cl_float) * (input_size + hidden_state_size));
+                      4 * sizeof(cl_float) * (input_size + lstm_size));
     lstm_cell_kernel = cl::Kernel(program, "lstm_cell", &error);
     assert(error == 0);
-    lstm_cell_kernel.setArg(0, ijfo_buffer);
-    lstm_cell_kernel.setArg(1, input_and_hidden_buffer);
-    lstm_cell_kernel.setArg(2, hidden_state_size);
+    lstm_cell_kernel.setArg(0, input_and_hidden_buffer);
+    lstm_cell_kernel.setArg(1, state_buffer);
+    lstm_cell_kernel.setArg(2, ijfo_buffer);
+    lstm_cell_kernel.setArg(3, input_size);
+    lstm_cell_kernel.setArg(4, lstm_size);
+
+    // TODO: make all buffers zero
 
     // Create exp_kernel
-    device_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(cl_float) * hidden_state_size);
+    device_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(cl_float) * lstm_size);
     exp_kernel = cl::Kernel(program, "calculate_exp", &error);
     assert(error == 0);
     exp_kernel.setArg(0, device_buffer);
-    exp_kernel.setArg(1, hidden_state_size);
+    exp_kernel.setArg(1, lstm_size);
 
     queue = cl::CommandQueue(context, device);
 }
 
 std::vector<cl_float>& LSTMCell::exp(std::vector<cl_float>& data) {
-    assert(static_cast<cl_float>(data.size()) == hidden_state_size);
-    int error = queue.enqueueWriteBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * hidden_state_size, data.data());
+    assert(static_cast<cl_float>(data.size()) == lstm_size);
+    int error = queue.enqueueWriteBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * lstm_size, data.data());
     assert(error == 0);
-    error = queue.enqueueNDRangeKernel(exp_kernel, 0, hidden_state_size, 1, NULL);
+    error = queue.enqueueNDRangeKernel(exp_kernel, 0, lstm_size, 1, NULL);
     assert(error == 0);
-    error = queue.enqueueReadBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * hidden_state_size, data.data());
+    error = queue.enqueueReadBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * lstm_size, data.data());
     assert(error == 0);
     return data;
 }
 
-void LSTMCell::process(std::vector<cl_float>& input_and_hidden) {
-    assert(static_cast<cl_float>(input_and_hidden.size()) == input_size + hidden_state_size);
+void LSTMCell::process(const std::vector<cl_float>& input, std::vector<cl_float>& output) {
+    assert(static_cast<cl_float>(input.size()) == input_size);
+    assert(static_cast<cl_float>(output.size()) == lstm_size);
 
-    // TODO: calcualte ijfo
-    /*
-    int error = queue.enqueueWriteBuffer(input_and_hidden_buffer, CL_TRUE, 0, sizeof(cl_float) * size, data.data());
+    // copy input to input_and_hidden_buffer
+    int error = queue.enqueueWriteBuffer(input_and_hidden_buffer, CL_TRUE, 0, sizeof(cl_float) * input_size, input.data());
     assert(error == 0);
-    */
 
-    int error = queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, hidden_state_size, 1, NULL);
+    // TODO: calculate ijfo with clBLAS
+
+    // calculate hidden_buffer and state_buffer
+    error = queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1, NULL);
     assert(error == 0);
-    error = queue.enqueueReadBuffer(device_buffer, CL_TRUE, 0, sizeof(cl_float) * input_and_hidden.size(),
-                                    input_and_hidden.data());
+
+    // read hidden buffer back
+    error = queue.enqueueReadBuffer(input_and_hidden_buffer, CL_TRUE, input_size, sizeof(cl_float) * lstm_size,
+                                    output.data());
     assert(error == 0);
 }

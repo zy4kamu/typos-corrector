@@ -1,7 +1,7 @@
 import ctypes
 import numpy as np
 
-_library = ctypes.cdll.LoadLibrary('../build/libpython-bindings.so')
+_library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.so')
 
 MESSAGE_SIZE = None
 

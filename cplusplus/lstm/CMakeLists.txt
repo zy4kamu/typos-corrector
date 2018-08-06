@@ -11,4 +11,4 @@ add_library(lstm SHARED lstm.cpp)
 target_link_libraries(lstm)
 
 add_executable(lstm-app main.cpp)
-target_link_libraries(lstm-app lstm OpenCL)
+target_link_libraries(lstm-app lstm OpenCL cblas clBLAS)

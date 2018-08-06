@@ -9,12 +9,15 @@ class LSTMCell {
 public:
     LSTMCell(const std::string& input_folder, cl_int input_size, cl_int compressor_size, cl_int lstm_size);
     void process(const std::vector<cl_float>& input, std::vector<cl_float>& output);
-    std::vector<cl_float>& exp(std::vector<cl_float>& data);
 private:
+    void calculate_ijfo(const std::vector<cl_float>& input);
+
+    // sizes of the model
     cl_float                  input_size;
     cl_float                  compressor_size;
     cl_float                  lstm_size;
 
+    // Usual OpenCL routine
     std::vector<cl::Platform> platforms;
     cl::Device                device;
     cl::Program::Sources      sources;
@@ -22,14 +25,15 @@ private:
     cl::Program               program;
     cl::CommandQueue          queue;
 
-    cl::Kernel                lstm_cell_kernel;
+    // Matrix multiplications buffers: input_and_hidden_buffer -> ijfo_buffer
     cl::Buffer                input_and_hidden_buffer; // glued together to calculate ijfo
-    cl::Buffer                state_buffer;
     cl::Buffer                left_matrix_kernel_buffer;
+    cl::Buffer                intermediate_matrix_buffer;
     cl::Buffer                right_matrix_kernel_buffer;
     cl::Buffer                bias_kernel_buffer;
-    cl::Buffer                ijfo_buffer;
 
-    cl::Kernel                exp_kernel;
-    cl::Buffer                device_buffer;
+    // buffers for lstm_cell
+    cl::Kernel                lstm_cell_kernel;
+    cl::Buffer                state_buffer;
+    cl::Buffer                ijfo_buffer;
 };

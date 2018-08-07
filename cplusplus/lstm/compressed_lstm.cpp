@@ -1,4 +1,4 @@
-#include "lstm.h"
+#include "compressed_lstm.h"
 
 #include <cassert>
 #include <fstream>
@@ -26,7 +26,7 @@ void read_buffer_from_file(cl::CommandQueue& queue, const std::string& input_fil
 
 } // anonymous namespace
 
-LSTMCell::LSTMCell(const std::string& input_folder, cl_int input_size, cl_int compressor_size, cl_int lstm_size)
+CompressedLSTMCell::CompressedLSTMCell(const std::string& input_folder, cl_int input_size, cl_int compressor_size, cl_int lstm_size)
     : input_size(input_size), compressor_size(compressor_size), lstm_size(lstm_size) {
     // get platform
     cl::Platform::get(&platforms);
@@ -39,7 +39,7 @@ LSTMCell::LSTMCell(const std::string& input_folder, cl_int input_size, cl_int co
     device = devices.front();
 
     // get source code
-    std::ifstream reader(std::string(ROOT_DIRECTORY) + "/lstm.cl");
+    std::ifstream reader(std::string(ROOT_DIRECTORY) + "/compressed_lstm.cl");
     std::string src(std::istreambuf_iterator<char>(reader), (std::istreambuf_iterator<char>()));
     assert(src.size() > 0);
     sources = cl::Program::Sources(1, src);
@@ -63,6 +63,11 @@ LSTMCell::LSTMCell(const std::string& input_folder, cl_int input_size, cl_int co
                                             sizeof(cl_float) * compressor_size * 4 * lstm_size);
     bias_kernel_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, 4 * sizeof(cl_float) * lstm_size);
     ijfo_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, 4 * sizeof(cl_float) * lstm_size);
+
+    // make all buffers zero
+    reset();
+
+    // create kernel for lstm cell computation
     lstm_cell_kernel = cl::Kernel(program, "lstm_cell", &error);
     assert(error == 0);
     lstm_cell_kernel.setArg(0, input_and_hidden_buffer);
@@ -70,16 +75,6 @@ LSTMCell::LSTMCell(const std::string& input_folder, cl_int input_size, cl_int co
     lstm_cell_kernel.setArg(2, ijfo_buffer);
     lstm_cell_kernel.setArg(3, input_size);
     lstm_cell_kernel.setArg(4, lstm_size);
-
-    // make all buffers zero
-    cl::Kernel initialize_buffers_kernel(program, "initialize", &error);
-    assert(error == 0);
-    initialize_buffers_kernel.setArg(0, input_and_hidden_buffer);
-    initialize_buffers_kernel.setArg(1, state_buffer);
-    initialize_buffers_kernel.setArg(2, input_size);
-    initialize_buffers_kernel.setArg(3, lstm_size);
-    error = queue.enqueueNDRangeKernel(initialize_buffers_kernel, 0, lstm_size, 1, NULL);
-    assert(error == 0);
 
     // read parameters from file
     read_buffer_from_file(queue, input_folder + "/bias", bias_kernel_buffer,
@@ -94,7 +89,19 @@ LSTMCell::LSTMCell(const std::string& input_folder, cl_int input_size, cl_int co
     assert(error == CL_SUCCESS);
 }
 
-void LSTMCell::process(const std::vector<cl_float>& input, std::vector<cl_float>& output) {
+void CompressedLSTMCell::reset() {
+    int error = 0;
+    cl::Kernel initialize_buffers_kernel(program, "initialize", &error);
+    assert(error == 0);
+    initialize_buffers_kernel.setArg(0, input_and_hidden_buffer);
+    initialize_buffers_kernel.setArg(1, state_buffer);
+    initialize_buffers_kernel.setArg(2, input_size);
+    initialize_buffers_kernel.setArg(3, lstm_size);
+    error = queue.enqueueNDRangeKernel(initialize_buffers_kernel, 0, lstm_size, 1);
+    assert(error == 0);
+}
+
+void CompressedLSTMCell::process(const std::vector<cl_float>& input, std::vector<cl_float>& output) {
     assert(static_cast<cl_float>(input.size()) == input_size);
     assert(static_cast<cl_float>(output.size()) == lstm_size);
 
@@ -102,16 +109,18 @@ void LSTMCell::process(const std::vector<cl_float>& input, std::vector<cl_float>
     calculate_ijfo(input);
 
     // calculate hidden_buffer and state_buffer
-    int error = queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1, NULL);
+    cl::Event event;
+    int error = queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1, NULL, &event);
     assert(error == 0);
+    event.wait();
 
     // read hidden buffer back
-    error = queue.enqueueReadBuffer(input_and_hidden_buffer, CL_TRUE, input_size, sizeof(cl_float) * lstm_size,
+    error = queue.enqueueReadBuffer(input_and_hidden_buffer, CL_TRUE, sizeof(cl_float) * input_size, sizeof(cl_float) * lstm_size,
                                     output.data());
     assert(error == 0);
 }
 
-void LSTMCell::calculate_ijfo(const std::vector<cl_float>& input) {
+void CompressedLSTMCell::calculate_ijfo(const std::vector<cl_float>& input) {
     // copy input to input_and_hidden_buffer
     int error = queue.enqueueWriteBuffer(input_and_hidden_buffer, CL_FALSE, 0, sizeof(cl_float) * input_size, input.data());
     assert(error == 0);
@@ -134,7 +143,7 @@ void LSTMCell::calculate_ijfo(const std::vector<cl_float>& input) {
                 intermediate_matrix_buffer.get(), // y
                 0,                                // offy
                 1,                                // incy
-                1,                                // 1
+                1,                                // numCommandQueues
                 &local_queue,                     // commandQueues
                 0,                                // numEventsInWaitList
                 NULL,                             // eventWaitList
@@ -158,16 +167,26 @@ void LSTMCell::calculate_ijfo(const std::vector<cl_float>& input) {
                 ijfo_buffer.get(),                // y
                 0,                                // offy
                 1,                                // incy
-                1,                                // 1
+                1,                                // numCommandQueues
                 &local_queue,                     // commandQueues
                 0,                                // numEventsInWaitList
                 NULL,                             // eventWaitList
-                NULL);                          // events
+                NULL);                            // events
     assert(status == clblasSuccess);
 
-    std::vector<cl_float> zz(4 * lstm_size);
-    error = queue.enqueueReadBuffer(ijfo_buffer, CL_TRUE, 0, sizeof(cl_float) * 4 * lstm_size,
-                                    zz.data());
-    int i = 0;
-    i++;
+    // add bias
+    status =
+    clblasSaxpy(4 * lstm_size,            // N
+                1,                        // alpha
+                bias_kernel_buffer.get(), // X
+                0,                        // offx
+                1,                        // incx
+                ijfo_buffer.get(),        // Y
+                0,                        // offy
+                1,                        // incy
+                1,                        // numCommandQueues
+                &local_queue,             // commandQueues
+                0,                        // numEventsInWaitList
+                NULL,                     // eventWaitList
+                NULL);                    // events
 }

@@ -5,17 +5,18 @@
 #include <string>
 #include <vector>
 
-class LSTMCell {
+class CompressedLSTMCell {
 public:
-    LSTMCell(const std::string& input_folder, cl_int input_size, cl_int compressor_size, cl_int lstm_size);
+    CompressedLSTMCell(const std::string& input_folder, cl_int input_size, cl_int compressor_size, cl_int lstm_size);
     void process(const std::vector<cl_float>& input, std::vector<cl_float>& output);
 private:
+    void reset();
     void calculate_ijfo(const std::vector<cl_float>& input);
 
     // sizes of the model
-    cl_float                  input_size;
-    cl_float                  compressor_size;
-    cl_float                  lstm_size;
+    cl_int                    input_size;
+    cl_int                    compressor_size;
+    cl_int                    lstm_size;
 
     // Usual OpenCL routine
     std::vector<cl::Platform> platforms;

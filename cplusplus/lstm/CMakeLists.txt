@@ -7,7 +7,7 @@ add_definitions(-DCL_HPP_MINIMUM_OPENCL_VERSION=120)
 add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
 add_definitions(-DROOT_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(lstm SHARED lstm.cpp)
+add_library(lstm SHARED compressed_lstm.cpp compressed_lstm.cl)
 target_link_libraries(lstm)
 
 add_executable(lstm-app main.cpp)

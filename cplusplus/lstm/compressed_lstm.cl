@@ -14,6 +14,15 @@ float exponent(float value) {
     return exp(value);
 }
 
+float sigmoid(float value) {
+    return 1. / (1. + exponent(-value));
+}
+
+float hyperbolic_tangent(float value) {
+    float exp_activation = exponent(-2.0 * value);
+    return (1. - exp_activation) / (1. + exp_activation);
+}
+
 __kernel void lstm_cell(__global float* input_and_hidden_buffer, __global float* state_buffer, 
                         __global float* ijfo_buffer, int input_size, int lstm_size)
 {
@@ -26,15 +35,12 @@ __kernel void lstm_cell(__global float* input_and_hidden_buffer, __global float*
 
     // forget information
     __global float* state = state_buffer + global_id;
-    *state = *state / (1. + exponent(-1. - forget_gate));
-    
+    *state *= sigmoid(1. + forget_gate);
+
     // update information
-    float input_sigma = 1. / (1. + exponent(-input_gate));
-    float exp_activation = exponent(-2.0 * activation_gate);
-    float tanh_activation = (1. - exp_activation) / (1. + exp_activation);
-    *state += input_sigma * tanh_activation;
+    *state += sigmoid(input_gate) * hyperbolic_tangent(activation_gate);
 
     // update output
     __global float* hidden = input_and_hidden_buffer + input_size + global_id;
-    *hidden = *state / (1. + exponent(-output_gate));
+    *hidden = hyperbolic_tangent(*state) * sigmoid(output_gate);
 }

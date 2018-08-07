@@ -5,8 +5,12 @@ import utils
 import cpp_bindings
 import protobuf_talker
 
-from tensorflow.python.ops import math_ops
+from tensorflow.python.framework import constant_op
+from tensorflow.python.framework import dtypes
+from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import init_ops
+from tensorflow.python.ops import math_ops
+from tensorflow.python.ops import nn_ops
 
 message_size = 25
 batch_size = None
@@ -33,6 +37,53 @@ class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
         self._bias = self.add_variable("bias",shape=[4 * self._num_units],
                                        initializer=init_ops.zeros_initializer(dtype=self.dtype))
 
+    def call(self, inputs, state):
+        """Long short-term memory cell (LSTM).
+
+        Args:
+          inputs: `2-D` tensor with shape `[batch_size, input_size]`.
+          state: An `LSTMStateTuple` of state tensors, each shaped
+            `[batch_size, self.state_size]`, if `state_is_tuple` has been set to
+            `True`.  Otherwise, a `Tensor` shaped
+            `[batch_size, 2 * self.state_size]`.
+
+        Returns:
+          A pair containing the new hidden state, and the new state (either a
+            `LSTMStateTuple` or a concatenated state, depending on
+            `state_is_tuple`).
+        """
+        sigmoid = math_ops.sigmoid
+        one = constant_op.constant(1, dtype=dtypes.int32)
+        # Parameters of gates are concatenated into one multiply for efficiency.
+        if self._state_is_tuple:
+          c, h = state
+        else:
+          c, h = array_ops.split(value=state, num_or_size_splits=2, axis=one)
+
+        gate_inputs = math_ops.matmul(
+            array_ops.concat([inputs, h], 1), self._kernel)
+        gate_inputs = nn_ops.bias_add(gate_inputs, self._bias)
+        self.zzzz_gate_inputs = gate_inputs
+
+        # i = input_gate, j = new_input, f = forget_gate, o = output_gate
+        i, j, f, o = array_ops.split(
+            value=gate_inputs, num_or_size_splits=4, axis=one)
+
+        forget_bias_tensor = constant_op.constant(self._forget_bias, dtype=f.dtype)
+        # Note that using `add` and `multiply` instead of `+` and `*` gives a
+        # performance improvement. So using those at the cost of readability.
+        add = math_ops.add
+        multiply = math_ops.multiply
+        new_c = add(multiply(c, sigmoid(add(f, forget_bias_tensor))),
+                    multiply(sigmoid(i), self._activation(j)))
+        new_h = multiply(self._activation(new_c), sigmoid(o))
+
+        if self._state_is_tuple:
+          new_state = tf.contrib.rnn.LSTMStateTuple(new_c, new_h)
+        else:
+          new_state = array_ops.concat([new_c, new_h], 1)
+        return new_h, new_state
+
 
 class Network(object):
     def __init__(self):
@@ -51,6 +102,7 @@ class Network(object):
         with tf.device("/device:GPU:0"):
             test_logits = self.__create_output_logits(test_batch_size)
             train_logits = self.__create_output_logits(batch_size)
+            zzzzz_logits = self.__create_zzzzzz_logit()
 
             # create loss which we want to minimize and optimizer to make optimization
             clean_one_hot_embedding = tf.one_hot(self.clean_tokens, utils.NUM_SYMBOLS)
@@ -94,6 +146,8 @@ class Network(object):
                 test_num_correct = 0
                 test_num_letters = 0
                 dummy_num_correct = 0
+                zzzzzzz, = self.sess.run([zzzzz_logits], feed_dict={})
+                print 'ZZZZZZ', zzzzzzz.reshape(-1)[0:100]
                 predictions, = self.sess.run([test_logits], feed_dict={ self.contaminated_tokens:contaminated_test_batch,
                                                                         self.clean_tokens:clean_test_batch })
                 test_num_letters += test_batch_size * message_size
@@ -201,6 +255,12 @@ class Network(object):
             logits.append(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias)
             output, state = self.decode_lstm(clean_embedding[:, i, :], state)
         return logits
+
+    def __create_zzzzzz_logit(self):
+        clean_embedding = tf.one_hot(tf.zeros(1, dtype=np.int32), utils.NUM_SYMBOLS)
+        state = self.encode_lstm.zero_state(1, tf.float32)
+        output, state = self.encode_lstm(clean_embedding, state)
+        return self.encode_lstm.zzzz_gate_inputs
 
 class NetworkAutomata(Network):
     def __init__(self):

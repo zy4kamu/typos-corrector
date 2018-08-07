@@ -4,6 +4,8 @@
 #include <fstream>
 #include <clBLAS.h>
 
+#include <iostream>
+
 namespace {
 
 std::vector<cl_float> read_file(const std::string& filename) {
@@ -26,7 +28,8 @@ void read_buffer_from_file(cl::CommandQueue& queue, const std::string& input_fil
 
 } // anonymous namespace
 
-CompressedLSTMCell::CompressedLSTMCell(const std::string& input_folder, cl_int input_size, cl_int compressor_size, cl_int lstm_size)
+CompressedLSTMCell::CompressedLSTMCell(const std::string& input_folder_prefix, cl_int input_size, cl_int compressor_size,
+                                       cl_int lstm_size)
     : input_size(input_size), compressor_size(compressor_size), lstm_size(lstm_size) {
     // get platform
     cl::Platform::get(&platforms);
@@ -52,17 +55,13 @@ CompressedLSTMCell::CompressedLSTMCell(const std::string& input_folder, cl_int i
     queue = cl::CommandQueue(context, device);
 
     // create buffers
-    input_and_hidden_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                                         sizeof(cl_float) * (input_size + lstm_size));
-    state_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(cl_float) * lstm_size);
-    left_matrix_kernel_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                                           sizeof(cl_float) * (input_size + lstm_size) * compressor_size);
-    intermediate_matrix_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                                           sizeof(cl_float) * compressor_size);
-    right_matrix_kernel_buffer = cl::Buffer(context, CL_MEM_READ_WRITE,
-                                            sizeof(cl_float) * compressor_size * 4 * lstm_size);
-    bias_kernel_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, 4 * sizeof(cl_float) * lstm_size);
-    ijfo_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, 4 * sizeof(cl_float) * lstm_size);
+    input_and_hidden_buffer = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(cl_float) * (input_size + lstm_size));
+    state_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * lstm_size);
+    left_matrix_kernel_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * (input_size + lstm_size) * compressor_size);
+    intermediate_matrix_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * compressor_size);
+    right_matrix_kernel_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * compressor_size * 4 * lstm_size);
+    bias_kernel_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, 4 * sizeof(cl_float) * lstm_size);
+    ijfo_buffer = cl::Buffer(context, CL_MEM_WRITE_ONLY, 4 * sizeof(cl_float) * lstm_size);
 
     // make all buffers zero
     reset();
@@ -77,11 +76,11 @@ CompressedLSTMCell::CompressedLSTMCell(const std::string& input_folder, cl_int i
     lstm_cell_kernel.setArg(4, lstm_size);
 
     // read parameters from file
-    read_buffer_from_file(queue, input_folder + "/bias", bias_kernel_buffer,
+    read_buffer_from_file(queue, input_folder_prefix + "bias", bias_kernel_buffer,
                           4 * lstm_size);
-    read_buffer_from_file(queue, input_folder + "/left_matrix", left_matrix_kernel_buffer,
+    read_buffer_from_file(queue, input_folder_prefix + "left_matrix", left_matrix_kernel_buffer,
                           (input_size + lstm_size) * compressor_size);
-    read_buffer_from_file(queue, input_folder + "/right_matrix", right_matrix_kernel_buffer,
+    read_buffer_from_file(queue, input_folder_prefix + "right_matrix", right_matrix_kernel_buffer,
                           compressor_size * 4 * lstm_size);
 
     // setup clBLAS
@@ -175,6 +174,8 @@ void CompressedLSTMCell::calculate_ijfo(const std::vector<cl_float>& input) {
     assert(status == clblasSuccess);
 
     // add bias
+    cl::Event event;
+    cl_event local_event = event.get();
     status =
     clblasSaxpy(4 * lstm_size,            // N
                 1,                        // alpha
@@ -188,5 +189,13 @@ void CompressedLSTMCell::calculate_ijfo(const std::vector<cl_float>& input) {
                 &local_queue,             // commandQueues
                 0,                        // numEventsInWaitList
                 NULL,                     // eventWaitList
-                NULL);                    // events
+                &local_event);            // events
+
+    event.wait();
+
+    std::vector<cl_float> zzz(4 * lstm_size);
+    error = queue.enqueueReadBuffer(ijfo_buffer, CL_TRUE, 0, sizeof(cl_float) * 10,
+                                    zzz.data());
+    for (int i = 0; i < 10; ++i)
+        std::cout << "ZZZ " << zzz[i] << std::endl;
 }

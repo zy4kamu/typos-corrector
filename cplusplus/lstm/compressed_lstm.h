@@ -7,7 +7,7 @@
 
 class CompressedLSTMCell {
 public:
-    CompressedLSTMCell(const std::string& input_folder, cl_int input_size, cl_int compressor_size, cl_int lstm_size);
+    CompressedLSTMCell(const std::string& input_folder_prefix, cl_int input_size, cl_int compressor_size, cl_int lstm_size);
     void process(const std::vector<cl_float>& input, std::vector<cl_float>& output);
 private:
     void reset();

@@ -6,11 +6,13 @@ __kernel void initialize(__global float* input_and_hidden_buffer, __global float
 }
 
 float exponent(float value) {
+/*
     if (value > 10) {
         return 22026;
     } else if (value < -10) {
         return 0;
     }
+    */
     return exp(value);
 }
 
@@ -32,6 +34,12 @@ __kernel void lstm_cell(__global float* input_and_hidden_buffer, __global float*
     float activation_gate = *(ijfo_buffer +     lstm_size + global_id);
     float forget_gate     = *(ijfo_buffer + 2 * lstm_size + global_id);
     float output_gate     = *(ijfo_buffer + 3 * lstm_size + global_id);
+
+/*
+    if (global_id == 0) {
+        printf("%lf %lf %lf %lf ", input_gate, activation_gate, forget_gate, output_gate);
+    }
+*/
 
     // forget information
     __global float* state = state_buffer + global_id;

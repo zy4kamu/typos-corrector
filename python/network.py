@@ -68,6 +68,7 @@ class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
         # i = input_gate, j = new_input, f = forget_gate, o = output_gate
         i, j, f, o = array_ops.split(
             value=gate_inputs, num_or_size_splits=4, axis=one)
+        self.zzz_i, self.zzz_j, self.zzz_f, self.zzz_o = i, j, f, o
 
         forget_bias_tensor = constant_op.constant(self._forget_bias, dtype=f.dtype)
         # Note that using `add` and `multiply` instead of `+` and `*` gives a
@@ -260,7 +261,7 @@ class Network(object):
         clean_embedding = tf.one_hot(tf.zeros(1, dtype=np.int32), utils.NUM_SYMBOLS)
         state = self.encode_lstm.zero_state(1, tf.float32)
         output, state = self.encode_lstm(clean_embedding, state)
-        return self.encode_lstm.zzzz_gate_inputs
+        return output
 
 class NetworkAutomata(Network):
     def __init__(self):

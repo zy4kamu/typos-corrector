@@ -191,11 +191,13 @@ void CompressedLSTMCell::calculate_ijfo(const std::vector<cl_float>& input) {
                 NULL,                     // eventWaitList
                 &local_event);            // events
 
-    event.wait();
+    event.wait(); // TODO: remove this event
 
+    /*
     std::vector<cl_float> zzz(4 * lstm_size);
     error = queue.enqueueReadBuffer(ijfo_buffer, CL_TRUE, 0, sizeof(cl_float) * 10,
                                     zzz.data());
     for (int i = 0; i < 10; ++i)
         std::cout << "ZZZ " << zzz[i] << std::endl;
+    */
 }

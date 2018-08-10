@@ -85,4 +85,26 @@ void generate_random_batch_on_all_update_regions(int32_t* clean_batch, int32_t* 
     BATCH_GENERATOR->generate_random_batch_on_all_urs(clean_batch, contaminated_batch, batch_size);
 }
 
+size_t levenstein(const char* first, const char* second, size_t message_size) {
+  if (message_size == 0) {
+    return 0;
+  }
+  size_t grid_size = message_size + 1;
+  std::vector<size_t> grid(grid_size * grid_size, 0);
+  for (size_t i = 0; i < grid_size; ++i) {
+    grid[grid_size * message_size + i] = grid[message_size + i * grid_size] = grid_size - i - 1;
+  }
+  for (size_t i = message_size - 1; i + 1 != 0; --i) {
+    for (size_t j = message_size - 1; j + 1 != 0; --j) {
+      if (first[i] == second[j]) {
+        grid[i * grid_size + j] = grid[(i + 1) * grid_size + (j + 1)];
+      } else {
+        grid[i * grid_size + j] = 1 + std::min(grid[(i + 1) * grid_size + (j + 1)],
+                                               std::min(grid[(i + 1) * grid_size + j], grid[i * grid_size + (j + 1)]));
+      }
+    }
+  }
+  return grid[0];
+}
+
 } // extern "C"

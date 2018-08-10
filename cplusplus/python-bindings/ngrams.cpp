@@ -1,5 +1,5 @@
 #include "ngrams.h"
-#include "utils.h"
+#include "../utils/utils.h"
 
 #include <cassert>
 #include <fstream>

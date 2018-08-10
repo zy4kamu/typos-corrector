@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <sys/stat.h>
+
 const int32_t A_INT = static_cast<int32_t>('a');
 const int32_t Z_INT = static_cast<int32_t>('z');
 const size_t NUM_LETTERS = Z_INT - A_INT + 2;
@@ -55,28 +57,16 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
-extern "C" {
-
-size_t levenstein(const char* first, const char* second, size_t message_size) {
-  if (message_size == 0) {
-    return 0;
-  }
-  size_t grid_size = message_size + 1;
-  std::vector<size_t> grid(grid_size * grid_size, 0);
-  for (size_t i = 0; i < grid_size; ++i) {
-    grid[grid_size * message_size + i] = grid[message_size + i * grid_size] = grid_size - i - 1;
-  }
-  for (size_t i = message_size - 1; i + 1 != 0; --i) {
-    for (size_t j = message_size - 1; j + 1 != 0; --j) {
-      if (first[i] == second[j]) {
-        grid[i * grid_size + j] = grid[(i + 1) * grid_size + (j + 1)];
-      } else {
-        grid[i * grid_size + j] = 1 + std::min(grid[(i + 1) * grid_size + (j + 1)],
-                                               std::min(grid[(i + 1) * grid_size + j], grid[i * grid_size + (j + 1)]));
-      }
+size_t get_file_size(const char* filename) {
+    assert(filename != nullptr);
+    struct stat st;
+    if (stat(filename, &st) == 0) {
+        return st.st_size;
+    } else {
+        exit(EXIT_FAILURE);
     }
-  }
-  return grid[0];
 }
 
-} // extern C
+size_t get_file_size(const std::string& filename) {
+    return get_file_size(filename.c_str());
+}

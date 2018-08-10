@@ -1,7 +1,7 @@
 #include "random-batch-generator.h"
 
 #include "compressor.h"
-#include "utils.h"
+#include "../utils/utils.h"
 
 #include <algorithm>
 // #include <iostream>

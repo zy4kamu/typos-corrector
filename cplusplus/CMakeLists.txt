@@ -10,6 +10,7 @@ else ()
     SET(CMAKE_CXX_FLAGS "-O0 -g ${COMMON_CXX_FLAGS}")
 endif ()
 
-add_subdirectory(lstm)
+add_subdirectory(network-hypo-searcher)
 add_subdirectory(network-talker)
 add_subdirectory(python-bindings)
+add_subdirectory(utils)

@@ -20,6 +20,7 @@ test_batch_size = 10000
 lstm_size = 512
 
 #TODO: play with forget bias
+#TODO: play with activation
 class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
     def __init__(self, num_units, forget_bias=1.0,
                  state_is_tuple=True, activation=None, reuse=None, name=None):
@@ -36,55 +37,6 @@ class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
         self._kernel = math_ops.mat_mul(self._left_matrix, self._right_matrix)
         self._bias = self.add_variable("bias",shape=[4 * self._num_units],
                                        initializer=init_ops.zeros_initializer(dtype=self.dtype))
-
-    def call(self, inputs, state):
-        """Long short-term memory cell (LSTM).
-
-        Args:
-          inputs: `2-D` tensor with shape `[batch_size, input_size]`.
-          state: An `LSTMStateTuple` of state tensors, each shaped
-            `[batch_size, self.state_size]`, if `state_is_tuple` has been set to
-            `True`.  Otherwise, a `Tensor` shaped
-            `[batch_size, 2 * self.state_size]`.
-
-        Returns:
-          A pair containing the new hidden state, and the new state (either a
-            `LSTMStateTuple` or a concatenated state, depending on
-            `state_is_tuple`).
-        """
-        sigmoid = math_ops.sigmoid
-        one = constant_op.constant(1, dtype=dtypes.int32)
-        # Parameters of gates are concatenated into one multiply for efficiency.
-        if self._state_is_tuple:
-          c, h = state
-        else:
-          c, h = array_ops.split(value=state, num_or_size_splits=2, axis=one)
-
-        gate_inputs = math_ops.matmul(
-            array_ops.concat([inputs, h], 1), self._kernel)
-        gate_inputs = nn_ops.bias_add(gate_inputs, self._bias)
-        self.zzzz_gate_inputs = gate_inputs
-
-        # i = input_gate, j = new_input, f = forget_gate, o = output_gate
-        i, j, f, o = array_ops.split(
-            value=gate_inputs, num_or_size_splits=4, axis=one)
-        self.zzz_i, self.zzz_j, self.zzz_f, self.zzz_o = i, j, f, o
-
-        forget_bias_tensor = constant_op.constant(self._forget_bias, dtype=f.dtype)
-        # Note that using `add` and `multiply` instead of `+` and `*` gives a
-        # performance improvement. So using those at the cost of readability.
-        add = math_ops.add
-        multiply = math_ops.multiply
-        new_c = add(multiply(c, sigmoid(add(f, forget_bias_tensor))),
-                    multiply(sigmoid(i), self._activation(j)))
-        new_h = multiply(self._activation(new_c), sigmoid(o))
-
-        if self._state_is_tuple:
-          new_state = tf.contrib.rnn.LSTMStateTuple(new_c, new_h)
-        else:
-          new_state = array_ops.concat([new_c, new_h], 1)
-        return new_h, new_state
-
 
 class Network(object):
     def __init__(self):

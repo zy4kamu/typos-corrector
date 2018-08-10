@@ -13,8 +13,6 @@ char to_char(int32_t number);
 std::string clean_token(const std::string& token);
 std::vector<std::string> split(const std::string &s, char delim);
 
-extern "C" {
+size_t get_file_size(const char *filename);
+size_t get_file_size(const std::string& filename);
 
-size_t levenstein(const char* first, const char* second, size_t message_size);
-
-} // extern C

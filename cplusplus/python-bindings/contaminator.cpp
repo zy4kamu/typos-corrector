@@ -1,5 +1,5 @@
 #include "contaminator.h"
-#include "utils.h"
+#include "../utils/utils.h"
 
 #include <unordered_map>
 

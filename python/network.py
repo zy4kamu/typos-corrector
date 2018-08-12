@@ -100,7 +100,7 @@ class Network(object):
                 test_num_letters = 0
                 dummy_num_correct = 0
                 zzzzzzz, = self.sess.run([zzzzz_logits], feed_dict={})
-                print 'ZZZZZZ', zzzzzzz.reshape(-1)[0:100]
+                print 'ZZZZZZ', zzzzzzz, 'max: ', np.argmax(zzzzzzz)
                 predictions, = self.sess.run([test_logits], feed_dict={ self.contaminated_tokens:contaminated_test_batch,
                                                                         self.clean_tokens:clean_test_batch })
                 test_num_letters += test_batch_size * message_size
@@ -210,9 +210,30 @@ class Network(object):
         return logits
 
     def __create_zzzzzz_logit(self):
-        clean_embedding = tf.one_hot(tf.zeros(1, dtype=np.int32), utils.NUM_SYMBOLS)
+        """
+        token = 'sloterdijk'
+        token += ' ' * (message_size - len(token))
+        clean_tokens = np.empty([1, message_size], dtype=np.int32)
+        for i in range(message_size):
+            clean_tokens[0, i] = utils.char_to_int(token[i])
+        clean_embedding = tf.one_hot(clean_tokens, utils.NUM_SYMBOLS)
+        logits = []
+        state = self.encode_lstm.zero_state(batch_size, tf.float32)
+        for i in range(message_size):
+            output, state = self.encode_lstm(self.contaminated_embedding[:, message_size - i - 1, :], state)
+        for i in range(message_size):
+            logits.append(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias)
+            output, state = self.decode_lstm(clean_embedding[:, i, :], state)
+        return logits
+        """
+        token = 'sloterdijk'
+        token += ' ' * (message_size - len(token))
         state = self.encode_lstm.zero_state(1, tf.float32)
-        output, state = self.encode_lstm(clean_embedding, state)
+        for i in range(message_size):
+            letter = utils.char_to_int(token[message_size - i - 1])
+            clean_embedding = tf.one_hot(letter * tf.ones(1, dtype=np.int32), utils.NUM_SYMBOLS)
+            output, state = self.encode_lstm(clean_embedding, state)
+        output = tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias
         return output
 
 class NetworkAutomata(Network):

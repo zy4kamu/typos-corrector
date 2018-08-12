@@ -7,6 +7,8 @@
 #include <cassert>
 #include <fstream>
 
+#include "common.h"
+
 namespace {
 const size_t MESSAGE_SIZE = 25;
 const size_t LOCAL_GROUP_SIZE = 32;
@@ -26,7 +28,7 @@ NetworkAutomata::NetworkAutomata(const boost::filesystem::path& input_folder)
                                                                NUM_LETTERS,
                                                                CL_MEM_WRITE_ONLY))
     // TODO: creation of buffer can be passed to OpenCLConnector
-    , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * LOCAL_GROUP_SIZE) {
+    , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * LOCAL_GROUP_SIZE) {
 
     // get source code
     std::ifstream reader(std::string(ROOT_DIRECTORY) + "/network-automata.cl");
@@ -52,19 +54,19 @@ NetworkAutomata::NetworkAutomata(const boost::filesystem::path& input_folder)
     logits_to_probabilities_kernel.setArg(0, output);
 }
 
-void NetworkAutomata::encode_message(const std::string& message, std::vector<cl_float>& first_letter_logits) {
+void NetworkAutomata::encode_message(const std::string& message, std::vector<float_type>& first_letter_logits) {
     for (size_t i = 0; i < MESSAGE_SIZE; ++i) {
         lstm.process(get_letter(message, MESSAGE_SIZE - i - 1), 0);
     }
     get_output(first_letter_logits);
 }
 
-void NetworkAutomata::apply(char letter, std::vector<cl_float>& next_letter_logits) {
+void NetworkAutomata::apply(char letter, std::vector<float_type>& next_letter_logits) {
     lstm.process(to_int(letter), 1);
     get_output(next_letter_logits);
 }
 
-void NetworkAutomata::get_output(std::vector<cl_float>& first_letter_logits) {
+void NetworkAutomata::get_output(std::vector<float_type>& first_letter_logits) {
     // linear transform of lstm output
     opencl_connector.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights,
                                             lstm.get_output_size(), NUM_LETTERS, output);
@@ -77,7 +79,7 @@ void NetworkAutomata::get_output(std::vector<cl_float>& first_letter_logits) {
 
     // read output
     // TODO: enqueueReadBuffer can be wrapped into OpenCLConnector
-    error = opencl_connector.queue.enqueueReadBuffer(output, CL_TRUE, 0, sizeof(cl_float) * NUM_LETTERS,
+    error = opencl_connector.queue.enqueueReadBuffer(output, CL_TRUE, 0, sizeof(float_type) * NUM_LETTERS,
                                                      first_letter_logits.data());
     assert(error == 0);
 }

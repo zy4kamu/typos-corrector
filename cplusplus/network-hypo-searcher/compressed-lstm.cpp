@@ -3,9 +3,8 @@
 #include <cassert>
 #include <fstream>
 
+#include "common.h"
 #include "../utils/utils.h"
-
-// TODO: cl_float and cl_int must be user defined types in order to switch them if needed
 
 CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
                                        const boost::filesystem::path& input_folder,
@@ -16,11 +15,11 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     for (size_t i = 0; i < models.size(); ++i) {
         //  get sizes
         const std::string model_prefix = (input_folder / models[i]).string();
-        cl_int local_lstm_size = static_cast<cl_int>(get_file_size(model_prefix + "bias")) / (4 * sizeof(cl_float));
-        cl_int local_compressor_size = static_cast<cl_int>(get_file_size(model_prefix + "right_matrix") /
-                                                           (4 * sizeof(cl_float) * local_lstm_size));
-        cl_int local_input_size = static_cast<cl_int>(get_file_size(model_prefix + "left_matrix") /
-                                                      (sizeof(cl_float) * local_compressor_size)) - local_lstm_size;
+        int_type local_lstm_size = static_cast<int_type>(get_file_size(model_prefix + "bias")) / (4 * sizeof(float_type));
+        int_type local_compressor_size = static_cast<int_type>(get_file_size(model_prefix + "right_matrix") /
+                                                           (4 * sizeof(float_type) * local_lstm_size));
+        int_type local_input_size = static_cast<int_type>(get_file_size(model_prefix + "left_matrix") /
+                                                      (sizeof(float_type) * local_compressor_size)) - local_lstm_size;
         if (i == 0) {
             lstm_size = local_lstm_size;
             compressor_size = local_compressor_size;
@@ -29,13 +28,13 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
             // create buffers
             // TODO: experiment with memory access types
             input_and_hidden_buffer = cl::Buffer(opencl_connector.context, CL_MEM_READ_WRITE,
-                                                 sizeof(cl_float) * (input_size + lstm_size));
-            hidden_buffer_region.origin = sizeof(cl_float) * input_size;
-            hidden_buffer_region.size = sizeof(cl_float) * lstm_size;
+                                                 sizeof(float_type) * (input_size + lstm_size));
+            hidden_buffer_region.origin = sizeof(float_type) * input_size;
+            hidden_buffer_region.size = sizeof(float_type) * lstm_size;
             hidden_buffer = input_and_hidden_buffer.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION,
                                                                     &hidden_buffer_region);
-            state_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * lstm_size);
-            ijfo_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, 4 * sizeof(cl_float) * lstm_size);
+            state_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * lstm_size);
+            ijfo_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, 4 * sizeof(float_type) * lstm_size);
         } else {
             assert(lstm_size == local_lstm_size);
             assert(compressor_size == local_compressor_size);
@@ -46,7 +45,7 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
                                                                                 (input_size + lstm_size) * compressor_size,
                                                                                 CL_MEM_WRITE_ONLY));
         intermediate_matrix_buffers.emplace_back(opencl_connector.context, CL_MEM_WRITE_ONLY,
-                                                 sizeof(cl_float) * compressor_size);
+                                                 sizeof(float_type) * compressor_size);
         right_matrix_buffers.emplace_back(opencl_connector.read_buffer_from_file(model_prefix + "right_matrix",
                                                                                 compressor_size * 4 * lstm_size,
                                                                                 CL_MEM_WRITE_ONLY));
@@ -99,10 +98,10 @@ void CompressedLSTMCell::reset() {
     assert(error == 0);
 }
 
-void CompressedLSTMCell::get_output(std::vector<cl_float>& output) const {
-    assert(static_cast<cl_float>(output.size()) == lstm_size);
-    int error = opencl_connector.queue.enqueueReadBuffer(input_and_hidden_buffer, CL_TRUE, sizeof(cl_float) * input_size,
-                                                         sizeof(cl_float) * lstm_size, output.data());
+void CompressedLSTMCell::get_output(std::vector<float_type>& output) const {
+    assert(static_cast<float_type>(output.size()) == lstm_size);
+    int error = opencl_connector.queue.enqueueReadBuffer(input_and_hidden_buffer, CL_TRUE, sizeof(float_type) * input_size,
+                                                         sizeof(float_type) * lstm_size, output.data());
     assert(error == 0);
 }
 
@@ -112,7 +111,7 @@ void CompressedLSTMCell::process(size_t one_hot_index, size_t model_index) {
     assert(error == 0);
 }
 
-void CompressedLSTMCell::calculate_ijfo(cl_int one_hot_index, size_t model_index) {
+void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_index) {
     assert(model_index < left_matrix_buffers.size());
     cl::Buffer& left_matrix_buffer = left_matrix_buffers[model_index];
     cl::Buffer& intermediate_matrix_buffer = intermediate_matrix_buffers[model_index];

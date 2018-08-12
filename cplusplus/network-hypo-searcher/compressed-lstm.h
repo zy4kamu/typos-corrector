@@ -7,23 +7,24 @@
 #include <boost/filesystem/path.hpp>
 
 #include "opencl-connector.h"
+#include "common.h"
 
 class CompressedLSTMCell {
 public:
     CompressedLSTMCell(OpenCLConnector& connector, const boost::filesystem::path& input_folder, const std::vector<std::string>& models);
     void process(size_t one_hot_index, size_t model_index = 0);
-    void get_output(std::vector<cl_float>& output) const;
-    cl_int get_input_size() const { return input_size; }
-    cl_int get_output_size() const { return lstm_size; }
+    void get_output(std::vector<float_type>& output) const;
+    int_type get_input_size() const { return input_size; }
+    int_type get_output_size() const { return lstm_size; }
     const cl::Buffer& get_hidden_buffer() const { return hidden_buffer; }
 private:
     void reset();
-    void calculate_ijfo(cl_int one_hot_index, size_t model_index);
+    void calculate_ijfo(int_type one_hot_index, size_t model_index);
 
     // sizes of the model
-    cl_int                  input_size;
-    cl_int                  compressor_size;
-    cl_int                  lstm_size;
+    int_type                input_size;
+    int_type                compressor_size;
+    int_type                lstm_size;
 
     // Usual OpenCL routine
     OpenCLConnector         opencl_connector;

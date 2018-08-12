@@ -7,7 +7,7 @@ add_definitions(-DCL_HPP_MINIMUM_OPENCL_VERSION=120)
 add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
 add_definitions(-DROOT_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_library(lstm SHARED compressed-lstm.cpp compressed-lstm.cl network-automata.cpp network-automata.cl opencl-connector.cpp)
+add_library(lstm SHARED compressed-lstm.cpp compressed-lstm.cl network-automata.cpp network-automata.cl opencl-connector.cpp common.h)
 target_link_libraries(lstm utils OpenCL cblas clBLAS boost_filesystem boost_system)
 
 add_executable(lstm-app main.cpp)

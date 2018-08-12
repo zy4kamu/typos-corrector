@@ -4,13 +4,15 @@
 #include <clBLAS.h>
 #include <fstream>
 
+#include "common.h"
+
 namespace {
 
-std::vector<cl_float> read_file(const boost::filesystem::path& filename) {
-    std::vector<cl_float> data;
+std::vector<float_type> read_file(const boost::filesystem::path& filename) {
+    std::vector<float_type> data;
     std::ifstream file(filename.string(), std::ios::binary);
-    cl_float item;
-    while (file.read(reinterpret_cast<char*>(&item), sizeof(cl_float))) {
+    float_type item;
+    while (file.read(reinterpret_cast<char*>(&item), sizeof(float_type))) {
         data.push_back(item);
     }
     return data;
@@ -38,16 +40,16 @@ OpenCLConnector::OpenCLConnector() {
 cl::Buffer OpenCLConnector::read_buffer_from_file(const boost::filesystem::path& input_file, size_t size,
                                                   int memory_permissions) {
     // TODO: memory map directly to GPU
-    cl::Buffer buffer(context, memory_permissions, sizeof(cl_float) * size);
-    std::vector<cl_float> data = read_file(input_file);
+    cl::Buffer buffer(context, memory_permissions, sizeof(float_type) * size);
+    std::vector<float_type> data = read_file(input_file);
     assert(data.size() == size);
-    int error = queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(cl_float) * size, data.data());
+    int error = queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(float_type) * size, data.data());
     assert(error == 0);
     return buffer;
 }
 
-void OpenCLConnector::vector_matrix_multiply(const cl::Buffer& vector, const cl::Buffer& matrix, cl_int matrix_num_rows,
-                                             cl_int matrix_num_cols, cl::Buffer& output) {
+void OpenCLConnector::vector_matrix_multiply(const cl::Buffer& vector, const cl::Buffer& matrix, int_type matrix_num_rows,
+                                             int_type matrix_num_cols, cl::Buffer& output) {
     cl_command_queue local_queue = queue.get();
     clblasStatus status =
     clblasSgemv(clblasRowMajor,  // order
@@ -73,7 +75,7 @@ void OpenCLConnector::vector_matrix_multiply(const cl::Buffer& vector, const cl:
     assert(status == clblasSuccess);
 }
 
-void OpenCLConnector::add_to_vector(const cl::Buffer& to_add, cl::Buffer& vector, cl_int size) {
+void OpenCLConnector::add_to_vector(const cl::Buffer& to_add, cl::Buffer& vector, int_type size) {
     cl_command_queue local_queue = queue.get();
     int status =
     clblasSaxpy(size,         // N

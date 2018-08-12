@@ -4,16 +4,17 @@
 #include "opencl-connector.h"
 
 #include <boost/filesystem/path.hpp>
-#include <cl2.hpp>
 #include <vector>
+
+#include "common.h"
 
 class NetworkAutomata {
 public:
     NetworkAutomata(const boost::filesystem::path& input_folder);
-    void encode_message(const std::string& messsage, std::vector<cl_float>& first_letter_logits);
-    void apply(char letter, std::vector<cl_float>& next_letter_logits);
+    void encode_message(const std::string& messsage, std::vector<float_type>& first_letter_logits);
+    void apply(char letter, std::vector<float_type>& next_letter_logits);
 private:
-    void get_output(std::vector<cl_float>& first_letter_logits);
+    void get_output(std::vector<float_type>& first_letter_logits);
     OpenCLConnector       opencl_connector;
     cl::Program::Sources  sources;
     cl::Program           program;

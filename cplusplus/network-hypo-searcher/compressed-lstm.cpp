@@ -6,6 +6,8 @@
 #include "common.h"
 #include "../utils/utils.h"
 
+namespace NOpenCLConnector {
+
 CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
                                        const boost::filesystem::path& input_folder,
                                        const std::vector<std::string>& models)
@@ -135,4 +137,4 @@ void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_ind
     opencl_connector.add_to_vector(bias_buffer, ijfo_buffer, 4 * lstm_size);
 }
 
-
+} // namespace NOpenCLConnector

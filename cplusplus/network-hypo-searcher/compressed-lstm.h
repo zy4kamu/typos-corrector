@@ -9,6 +9,8 @@
 #include "opencl-connector.h"
 #include "common.h"
 
+namespace NOpenCLConnector {
+
 class CompressedLSTMCell {
 public:
     CompressedLSTMCell(OpenCLConnector& connector, const boost::filesystem::path& input_folder, const std::vector<std::string>& models);
@@ -50,3 +52,5 @@ private:
     cl::Kernel              initialize_buffers_kernel;
     cl::Kernel              set_input_kernel;
 };
+
+} // namespace NOpenCLConnector

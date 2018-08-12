@@ -6,6 +6,8 @@
 
 #include "common.h"
 
+namespace NOpenCLConnector {
+
 struct OpenCLConnector {
     OpenCLConnector();
     cl::Buffer read_buffer_from_file(const boost::filesystem::path& input_file, size_t size, int memory_permissions);
@@ -18,3 +20,5 @@ struct OpenCLConnector {
     cl::Context               context;
     cl::CommandQueue          queue;
 };
+
+} // namespace NOpenCLConnector

@@ -8,6 +8,8 @@
 
 #include "common.h"
 
+namespace NOpenCLConnector {
+
 class NetworkAutomata {
 public:
     NetworkAutomata(const boost::filesystem::path& input_folder);
@@ -25,3 +27,5 @@ private:
     cl::Buffer         hidden_layer_bias;
     cl::Buffer         output;
 };
+
+} // namespace NOpenCLConnector

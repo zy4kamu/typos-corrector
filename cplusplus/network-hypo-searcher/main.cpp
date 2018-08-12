@@ -11,6 +11,8 @@
 
 #include "common.h"
 
+using namespace NOpenCLConnector;
+
 size_t argmax(const std::vector<float_type>& data) {
     float_type max = std::numeric_limits<float_type>::min();
     size_t best_index = 0;

@@ -1,13 +1,14 @@
 #include "network-automata.h"
 #include "../utils/utils.h"
 
-// TODO: namespaces to each project
 // TODO: don't like naming conventions in this file (LOCAL_GROUP_SIZE is bad name, for example)
 
 #include <cassert>
 #include <fstream>
 
 #include "common.h"
+
+namespace NOpenCLConnector {
 
 namespace {
 const size_t MESSAGE_SIZE = 25;
@@ -27,7 +28,6 @@ NetworkAutomata::NetworkAutomata(const boost::filesystem::path& input_folder)
     , hidden_layer_bias(opencl_connector.read_buffer_from_file(input_folder / "hidden_layer_bias",
                                                                NUM_LETTERS,
                                                                CL_MEM_WRITE_ONLY))
-    // TODO: creation of buffer can be passed to OpenCLConnector
     , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * LOCAL_GROUP_SIZE) {
 
     // get source code
@@ -78,8 +78,9 @@ void NetworkAutomata::get_output(std::vector<float_type>& first_letter_logits) {
     assert(error == 0);
 
     // read output
-    // TODO: enqueueReadBuffer can be wrapped into OpenCLConnector
     error = opencl_connector.queue.enqueueReadBuffer(output, CL_TRUE, 0, sizeof(float_type) * NUM_LETTERS,
                                                      first_letter_logits.data());
     assert(error == 0);
 }
+
+} // namespace NOpenCLConnector

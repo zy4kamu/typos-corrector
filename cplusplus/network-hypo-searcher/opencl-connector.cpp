@@ -6,6 +6,8 @@
 
 #include "common.h"
 
+namespace NOpenCLConnector {
+
 namespace {
 
 std::vector<float_type> read_file(const boost::filesystem::path& filename) {
@@ -94,3 +96,4 @@ void OpenCLConnector::add_to_vector(const cl::Buffer& to_add, cl::Buffer& vector
     assert(status == clblasSuccess);
 }
 
+} // namespace NOpenCLConnector

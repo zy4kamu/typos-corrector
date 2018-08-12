@@ -75,19 +75,27 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     lstm_cell_kernel.setArg(3, input_size);
     lstm_cell_kernel.setArg(4, lstm_size);
 
-    // make all buffers zero
-    reset();
-}
-
-void CompressedLSTMCell::reset() {
-    int error = 0;
-    cl::Kernel initialize_buffers_kernel(program, "initialize", &error);
+    // create buffer for reseting lstm after each start
+    error = 0;
+    initialize_buffers_kernel = cl::Kernel(program, "reset", &error);
     assert(error == 0);
     initialize_buffers_kernel.setArg(0, input_and_hidden_buffer);
     initialize_buffers_kernel.setArg(1, state_buffer);
     initialize_buffers_kernel.setArg(2, input_size);
     initialize_buffers_kernel.setArg(3, lstm_size);
-    error = opencl_connector.queue.enqueueNDRangeKernel(initialize_buffers_kernel, 0, lstm_size, 1);
+
+    // create buffer for setup input on each lstm_cell call
+    error = 0;
+    set_input_kernel = cl::Kernel(program, "set_input", &error);
+    assert(error == 0);
+    set_input_kernel.setArg(0, input_and_hidden_buffer);
+
+    // make all buffers zero
+    reset();
+}
+
+void CompressedLSTMCell::reset() {
+    int error = opencl_connector.queue.enqueueNDRangeKernel(initialize_buffers_kernel, 0, lstm_size, 1);
     assert(error == 0);
 }
 
@@ -98,29 +106,22 @@ void CompressedLSTMCell::get_output(std::vector<cl_float>& output) const {
     assert(error == 0);
 }
 
-void CompressedLSTMCell::process(const std::vector<cl_float>& input, size_t model_index) {
-    assert(static_cast<cl_float>(input.size()) == input_size);
-    // calculate ijfo matrix (the only place where matrix multiplication is done)
-    calculate_ijfo(input, model_index);
-
-    // calculate hidden_buffer and state_buffer
-    // TODO: do you really need this event?
-    cl::Event event;
-    int error = opencl_connector.queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1, NULL, &event);
+void CompressedLSTMCell::process(size_t one_hot_index, size_t model_index) {
+    calculate_ijfo(one_hot_index, model_index);
+    int error = opencl_connector.queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1);
     assert(error == 0);
-    event.wait();
 }
 
-void CompressedLSTMCell::calculate_ijfo(const std::vector<cl_float>& input, size_t model_index) {
+void CompressedLSTMCell::calculate_ijfo(cl_int one_hot_index, size_t model_index) {
     assert(model_index < left_matrix_buffers.size());
     cl::Buffer& left_matrix_buffer = left_matrix_buffers[model_index];
     cl::Buffer& intermediate_matrix_buffer = intermediate_matrix_buffers[model_index];
     cl::Buffer& right_matrix_buffer = right_matrix_buffers[model_index];
     cl::Buffer& bias_buffer = bias_buffers[model_index];
 
-    // copy input to input_and_hidden_buffer
-    int error = opencl_connector.queue.enqueueWriteBuffer(input_and_hidden_buffer, CL_FALSE, 0,
-                                                          sizeof(cl_float) * input_size, input.data());
+    // set input
+    set_input_kernel.setArg(1, one_hot_index);
+    int error = opencl_connector.queue.enqueueNDRangeKernel(set_input_kernel, 0, input_size, 1);
     assert(error == 0);
 
     // multiply on left matrix

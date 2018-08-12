@@ -50,28 +50,18 @@ NetworkAutomata::NetworkAutomata(const boost::filesystem::path& input_folder)
     logits_to_probabilities_kernel = cl::Kernel(program, "logits_to_probabilities", &error);
     assert(error == 0);
     logits_to_probabilities_kernel.setArg(0, output);
-
-    one_hot_encoding.resize(lstm.get_input_size(), 0);
-    previous_one_host_index = 0;
 }
 
 void NetworkAutomata::encode_message(const std::string& message, std::vector<cl_float>& first_letter_logits) {
     for (size_t i = 0; i < MESSAGE_SIZE; ++i) {
-        push_char(get_letter(message, MESSAGE_SIZE - i - 1), 0);
+        lstm.process(get_letter(message, MESSAGE_SIZE - i - 1), 0);
     }
     get_output(first_letter_logits);
 }
 
 void NetworkAutomata::apply(char letter, std::vector<cl_float>& next_letter_logits) {
-    push_char(to_int(letter), 1);
+    lstm.process(to_int(letter), 1);
     get_output(next_letter_logits);
-}
-
-void NetworkAutomata::push_char(int letter, size_t lstm_model_index) {
-    one_hot_encoding[previous_one_host_index] = 0;
-    one_hot_encoding[letter] = 1;
-    previous_one_host_index = letter;
-    lstm.process(one_hot_encoding, lstm_model_index);
 }
 
 void NetworkAutomata::get_output(std::vector<cl_float>& first_letter_logits) {

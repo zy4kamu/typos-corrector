@@ -1,8 +1,17 @@
-__kernel void initialize(__global float* input_and_hidden_buffer, __global float* state_buffer,
-                         int input_size, int lstm_size) {
+__kernel void reset(__global float* input_and_hidden_buffer, __global float* state_buffer,
+                    int input_size, int lstm_size) {
     int global_id = get_global_id(0);
     input_and_hidden_buffer[global_id + input_size] = 0;
     state_buffer[global_id] = 0;
+}
+
+__kernel void set_input(__global float* input_and_hidden_buffer, int one_hot_index) {
+    int global_id = get_global_id(0);
+    if (global_id == one_hot_index) {
+        input_and_hidden_buffer[global_id] = 1;
+    } else {
+        input_and_hidden_buffer[global_id] = 0;
+    }
 }
 
 float sigmoid(float value) {

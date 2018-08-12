@@ -9,19 +9,6 @@
 #include <fstream>
 #include <limits>
 
-void test_lstm() {
-    OpenCLConnector opencl_connector;
-    CompressedLSTMCell cell(opencl_connector, "/home/stepan/git-repos/typos-corrector/python/model/parameters/",
-                            { "encode_lstm_", "decode_lstm_" });
-    std::vector<cl_float> input(27, 0);
-    input[0] = 1;
-    cell.process(input);
-    std::vector<cl_float> output(512);
-    cell.get_output(output);
-    for (cl_float _ : output) std::cout << _ << " ";
-    std::cout << std::endl;
-}
-
 size_t argmax(const std::vector<cl_float>& data) {
     cl_float max = std::numeric_limits<cl_float>::min();
     size_t best_index = 0;
@@ -48,6 +35,5 @@ void test_network_automata() {
 }
 
 int main() {
-    // test_lstm();
     test_network_automata();
 }

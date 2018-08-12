@@ -31,12 +31,20 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
             // TODO: experiment with memory access types
             input_and_hidden_buffer = cl::Buffer(opencl_connector.context, CL_MEM_READ_WRITE,
                                                  sizeof(float_type) * (input_size + lstm_size));
+            state_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * lstm_size);
+            ijfo_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, 4 * sizeof(float_type) * lstm_size);
+
+            // hidden_buffer is a sub buffer of input_and_hidden_buffer and is created for simplicity
             hidden_buffer_region.origin = sizeof(float_type) * input_size;
             hidden_buffer_region.size = sizeof(float_type) * lstm_size;
             hidden_buffer = input_and_hidden_buffer.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION,
                                                                     &hidden_buffer_region);
-            state_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * lstm_size);
-            ijfo_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, 4 * sizeof(float_type) * lstm_size);
+
+            // hidden_buffer is a sub buffer of input_and_hidden_buffer and is created for simplicity
+            input_buffer_region.origin = 0;
+            input_buffer_region.size = sizeof(float_type) * input_size;
+            input_buffer = input_and_hidden_buffer.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION,
+                                                                   &input_buffer_region);
         } else {
             assert(lstm_size == local_lstm_size);
             assert(compressor_size == local_compressor_size);
@@ -70,7 +78,7 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     // create kernel for lstm cell computation
     lstm_cell_kernel = cl::Kernel(program, "lstm_cell", &error);
     assert(error == 0);
-    lstm_cell_kernel.setArg(0, input_and_hidden_buffer);
+    lstm_cell_kernel.setArg(0, hidden_buffer);
     lstm_cell_kernel.setArg(1, state_buffer);
     lstm_cell_kernel.setArg(2, ijfo_buffer);
     lstm_cell_kernel.setArg(3, input_size);
@@ -80,7 +88,7 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     error = 0;
     initialize_buffers_kernel = cl::Kernel(program, "reset", &error);
     assert(error == 0);
-    initialize_buffers_kernel.setArg(0, input_and_hidden_buffer);
+    initialize_buffers_kernel.setArg(0, hidden_buffer);
     initialize_buffers_kernel.setArg(1, state_buffer);
     initialize_buffers_kernel.setArg(2, input_size);
     initialize_buffers_kernel.setArg(3, lstm_size);
@@ -89,7 +97,7 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     error = 0;
     set_input_kernel = cl::Kernel(program, "set_input", &error);
     assert(error == 0);
-    set_input_kernel.setArg(0, input_and_hidden_buffer);
+    set_input_kernel.setArg(0, input_buffer);
 
     // make all buffers zero
     reset();
@@ -102,8 +110,8 @@ void CompressedLSTMCell::reset() {
 
 void CompressedLSTMCell::get_output(std::vector<float_type>& output) const {
     assert(static_cast<float_type>(output.size()) == lstm_size);
-    int error = opencl_connector.queue.enqueueReadBuffer(input_and_hidden_buffer, CL_TRUE, sizeof(float_type) * input_size,
-                                                         sizeof(float_type) * lstm_size, output.data());
+    int error = opencl_connector.queue.enqueueReadBuffer(hidden_buffer, CL_TRUE, 0, sizeof(float_type) * lstm_size,
+                                                         output.data());
     assert(error == 0);
 }
 

@@ -34,10 +34,11 @@ private:
     cl::Program             program;
 
     // Matrix multiplications buffers: input_and_hidden_buffer -> ijfo_buffer
-    // TODO: make a separate buffer for input only
     cl::Buffer              input_and_hidden_buffer; // glued together to calculate ijfo
+    cl::Buffer              input_buffer;            // doesn't own memory
+    cl_buffer_region        input_buffer_region;     // used in creation of input_buffer only
     cl::Buffer              hidden_buffer;           // doesn't own memory
-    cl_buffer_region        hidden_buffer_region;
+    cl_buffer_region        hidden_buffer_region;    // used in creation of hidden_buffer only
     std::vector<cl::Buffer> left_matrix_buffers;
     std::vector<cl::Buffer> intermediate_matrix_buffers;
     std::vector<cl::Buffer> right_matrix_buffers;

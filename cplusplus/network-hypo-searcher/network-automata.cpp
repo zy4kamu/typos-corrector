@@ -8,7 +8,7 @@
 
 #include "common.h"
 
-namespace NOpenCLConnector {
+namespace NNetworkHypoSearcher {
 
 namespace {
 const size_t MESSAGE_SIZE = 25;
@@ -55,10 +55,16 @@ NetworkAutomata::NetworkAutomata(const boost::filesystem::path& input_folder)
 }
 
 void NetworkAutomata::encode_message(const std::string& message, std::vector<float_type>& first_letter_logits) {
+    lstm.make_all_buffers_zero();
     for (size_t i = 0; i < MESSAGE_SIZE; ++i) {
         lstm.process(get_letter(message, MESSAGE_SIZE - i - 1), 0);
     }
+    lstm.store_current_hypo_pass();
     get_output(first_letter_logits);
+}
+
+void NetworkAutomata::reset() {
+    lstm.reset_current_hypo_pass();
 }
 
 void NetworkAutomata::apply(char letter, std::vector<float_type>& next_letter_logits) {

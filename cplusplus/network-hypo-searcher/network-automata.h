@@ -8,12 +8,13 @@
 
 #include "common.h"
 
-namespace NOpenCLConnector {
+namespace NNetworkHypoSearcher {
 
 class NetworkAutomata {
 public:
     NetworkAutomata(const boost::filesystem::path& input_folder);
     void encode_message(const std::string& messsage, std::vector<float_type>& first_letter_logits);
+    void reset();
     void apply(char letter, std::vector<float_type>& next_letter_logits);
 private:
     void get_output(std::vector<float_type>& first_letter_logits);

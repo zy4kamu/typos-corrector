@@ -6,7 +6,7 @@
 
 #include "common.h"
 
-namespace NOpenCLConnector {
+namespace NNetworkHypoSearcher {
 
 namespace {
 

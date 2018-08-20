@@ -9,7 +9,7 @@
 #include "opencl-connector.h"
 #include "common.h"
 
-namespace NOpenCLConnector {
+namespace NNetworkHypoSearcher {
 
 class CompressedLSTMCell {
 public:
@@ -19,8 +19,10 @@ public:
     int_type get_input_size() const { return input_size; }
     int_type get_output_size() const { return lstm_size; }
     const cl::Buffer& get_hidden_buffer() const { return hidden_buffer; }
+    void make_all_buffers_zero();
+    void store_current_hypo_pass();
+    void reset_current_hypo_pass();
 private:
-    void reset();
     void calculate_ijfo(int_type one_hot_index, size_t model_index);
 
     // sizes of the model
@@ -52,6 +54,12 @@ private:
     cl::Kernel              lstm_cell_kernel;
     cl::Kernel              initialize_buffers_kernel;
     cl::Kernel              set_input_kernel;
+    cl::Kernel              reset_current_hypo_pass_kernel;
+    cl::Kernel              store_current_hypo_pass_kernel;
+
+    // kernels for reset between trying different hypos
+    cl::Buffer              stored_state_buffer;
+    cl::Buffer              stored_hidden_buffer;
 };
 
 } // namespace NOpenCLConnector

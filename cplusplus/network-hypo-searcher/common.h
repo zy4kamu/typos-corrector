@@ -2,7 +2,7 @@
 
 #include <cl2.hpp>
 
-namespace NOpenCLConnector {
+namespace NNetworkHypoSearcher {
 
 using float_type = cl_float;
 using int_type = cl_int;

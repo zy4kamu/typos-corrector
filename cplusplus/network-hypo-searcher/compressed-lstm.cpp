@@ -6,7 +6,7 @@
 #include "common.h"
 #include "../utils/utils.h"
 
-namespace NOpenCLConnector {
+namespace NNetworkHypoSearcher {
 
 CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
                                        const boost::filesystem::path& input_folder,
@@ -45,6 +45,10 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
             input_buffer_region.size = sizeof(float_type) * input_size;
             input_buffer = input_and_hidden_buffer.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION,
                                                                    &input_buffer_region);
+
+            // kernels for reset between trying different hypos
+            stored_state_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * lstm_size);
+            stored_hidden_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * lstm_size);
         } else {
             assert(lstm_size == local_lstm_size);
             assert(compressor_size == local_compressor_size);
@@ -84,7 +88,7 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     lstm_cell_kernel.setArg(3, input_size);
     lstm_cell_kernel.setArg(4, lstm_size);
 
-    // create buffer for reseting lstm after each start
+    // create kernel for reseting lstm after each start
     error = 0;
     initialize_buffers_kernel = cl::Kernel(program, "reset", &error);
     assert(error == 0);
@@ -93,18 +97,44 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     initialize_buffers_kernel.setArg(2, input_size);
     initialize_buffers_kernel.setArg(3, lstm_size);
 
-    // create buffer for setup input on each lstm_cell call
+    // create kernel for setup input on each lstm_cell call
     error = 0;
     set_input_kernel = cl::Kernel(program, "set_input", &error);
     assert(error == 0);
     set_input_kernel.setArg(0, input_buffer);
 
-    // make all buffers zero
-    reset();
+    // create kernel for reseting current hypo pass
+    error = 0;
+    reset_current_hypo_pass_kernel = cl::Kernel(program, "copy_hidden_and_state_buffers", &error);
+    assert(error == 0);
+    reset_current_hypo_pass_kernel.setArg(0, hidden_buffer);
+    reset_current_hypo_pass_kernel.setArg(1, stored_hidden_buffer);
+    reset_current_hypo_pass_kernel.setArg(2, state_buffer);
+    reset_current_hypo_pass_kernel.setArg(3, stored_state_buffer);
+
+    // create kernel for saving current hypo pass
+    error = 0;
+    store_current_hypo_pass_kernel = cl::Kernel(program, "copy_hidden_and_state_buffers", &error);
+    assert(error == 0);
+    store_current_hypo_pass_kernel.setArg(0, stored_hidden_buffer);
+    store_current_hypo_pass_kernel.setArg(1, hidden_buffer);
+    store_current_hypo_pass_kernel.setArg(2, stored_state_buffer);
+    store_current_hypo_pass_kernel.setArg(3, state_buffer);
+    store_current_hypo_pass_kernel.setArg(4, lstm_size);
 }
 
-void CompressedLSTMCell::reset() {
+void CompressedLSTMCell::make_all_buffers_zero() {
     int error = opencl_connector.queue.enqueueNDRangeKernel(initialize_buffers_kernel, 0, lstm_size, 1);
+    assert(error == 0);
+}
+
+void CompressedLSTMCell::store_current_hypo_pass() {
+    int error = opencl_connector.queue.enqueueNDRangeKernel(store_current_hypo_pass_kernel, 0, lstm_size, 1);
+    assert(error == 0);
+}
+
+void CompressedLSTMCell::reset_current_hypo_pass() {
+    int error = opencl_connector.queue.enqueueNDRangeKernel(reset_current_hypo_pass_kernel, 0, lstm_size, 1);
     assert(error == 0);
 }
 

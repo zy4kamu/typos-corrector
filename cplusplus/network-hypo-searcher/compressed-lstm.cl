@@ -5,6 +5,13 @@ __kernel void reset(__global float* hidden_buffer, __global float* state_buffer,
     state_buffer[global_id] = 0;
 }
 
+__kernel void copy_hidden_and_state_buffers(__global float* to_hidden_buffer, __global float* from_hidden_buffer,
+                                            __global float* to_state_buffer, __global float* from_state_buffer) {
+    int global_id = get_global_id(0);
+    to_hidden_buffer[global_id] = from_hidden_buffer[global_id];
+    to_state_buffer[global_id] = from_state_buffer[global_id];
+}
+
 __kernel void set_input(__global float* input_buffer, int one_hot_index) {
     int global_id = get_global_id(0);
     if (global_id == one_hot_index) {

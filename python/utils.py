@@ -1,5 +1,6 @@
 import numpy as np
 import ctypes
+import unicodedata
 
 library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.so')
 
@@ -9,7 +10,7 @@ SPACE_INT = Z_INT - A_INT + 1
 NUM_SYMBOLS = SPACE_INT + 1
 
 def acceptable(letter): 
-    return letter == ' ' or ord('a') <= ord(letter) or ord(letter) <= ord('z')
+    return letter == ' ' or (ord('a') <= ord(letter) and ord(letter) <= ord('z'))
 
 def char_to_int(letter):
     assert acceptable(letter)
@@ -24,5 +25,8 @@ def numpy_to_string(array):
 
 def string_to_numpy(string):
     return np.array([char_to_int(letter) for letter in string], dtype=np.int32)
+
+def strip_accents(input):
+    return unicodedata.normalize('NFKD', input.decode('utf-8')).encode('ASCII', 'ignore')
 
 

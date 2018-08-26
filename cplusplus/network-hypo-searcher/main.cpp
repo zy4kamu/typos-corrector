@@ -1,5 +1,6 @@
 #include "compressed-lstm.h"
 #include "network-automata.h"
+#include "hypo-searcher.h"
 #include "opencl-connector.h"
 #include "../utils/utils.h"
 
@@ -54,6 +55,30 @@ void test_network_automata() {
     }
 }
 
+void test_hypo_searcher() {
+    HypoSearcher searcher("/home/stepan/git-repos/typos-corrector/python/model/update-regions/",
+                          "/home/stepan/git-repos/typos-corrector/python/model/parameters/",
+                          "/home/stepan/git-repos/typos-corrector/python/model/first-mistake-statistics");
+
+    /*
+    std::vector<std::string> hypos = searcher.search("bosenlomerweg");
+    for (const std::string& hypo : hypos) {
+        std::cout << hypo << std::endl;
+    }
+    */
+
+    std::string input;
+    while (true) {
+        std::cout << "Input something: ";
+        std::getline(std::cin, input);
+
+        std::vector<std::string> hypos = searcher.search(input);
+        for (const std::string& hypo : hypos) {
+            std::cout << hypo << std::endl;
+        }
+    }
+}
+
 int main() {
-    test_network_automata();
+    test_hypo_searcher();
 }

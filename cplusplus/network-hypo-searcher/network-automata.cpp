@@ -11,7 +11,6 @@
 namespace NNetworkHypoSearcher {
 
 namespace {
-const size_t MESSAGE_SIZE = 25;
 const size_t LOCAL_GROUP_SIZE = 32;
 
 int get_letter(const std::string& message, size_t position) {

@@ -47,7 +47,7 @@ def create_dataset(input_file, output_folder):
     os.makedirs(os.path.join(output_folder, country))
     for city, streets in city_to_street.iteritems():
         with open(os.path.join(output_folder, country + '/' + city), 'w') as writer:
-            writer.write('\n'.join(streets))
+            writer.write('\n'.join(sorted(list(streets))))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')

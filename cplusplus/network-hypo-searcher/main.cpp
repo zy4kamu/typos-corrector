@@ -3,6 +3,7 @@
 #include "hypo-searcher.h"
 #include "opencl-connector.h"
 #include "../utils/utils.h"
+#include "../python-bindings/dataset.h"
 
 #include <cblas.h>
 #include <iomanip>
@@ -80,5 +81,11 @@ void test_hypo_searcher() {
 }
 
 int main() {
+    DataSet dataset("/home/stepan/git-repos/typos-corrector/python/model/dataset");
+    std::mt19937 generator;
+    for (size_t i = 0; i < 100; ++i) {
+        std::tuple<std::string, std::string, std::string> data = dataset.get_random_item(generator);
+        std::cout << std::get<0>(data) <<  " " << std::get<1>(data) << " " << std::get<2>(data) << std::endl;
+    }
     test_hypo_searcher();
 }

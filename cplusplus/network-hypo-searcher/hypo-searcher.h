@@ -9,7 +9,6 @@
 
 #include "common.h"
 #include "network-automata.h"
-#include "../python-bindings/update-regions.h"
 #include "../python-bindings/compressor.h"
 
 namespace NNetworkHypoSearcher {
@@ -34,7 +33,7 @@ using AutomataNodesSet = std::set<HypoNode*, HypoNodePointerComparator>;
 
 class HypoSearcher {
 public:
-    HypoSearcher(const boost::filesystem::path& update_regions_folder,
+    HypoSearcher(const boost::filesystem::path& dataset_folder,
                  const boost::filesystem::path& lstm_folder,
                  const boost::filesystem::path& first_mistake_file);
     std::vector<std::string> search(const std::string& input_token);
@@ -45,7 +44,7 @@ private:
 
     NetworkAutomata         automata;
     std::vector<float_type> first_mistake_statistics;
-    UpdateRegionSet         update_regions;
+    DataSet                 dataset;
     Compressor              compressor;
 
     AutomataNodesSet nodes_to_process;

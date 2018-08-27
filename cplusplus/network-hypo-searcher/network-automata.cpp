@@ -81,6 +81,7 @@ void NetworkAutomata::get_output(std::vector<float_type>& first_letter_logits) {
     int error = opencl_connector.queue.enqueueNDRangeKernel(logits_to_probabilities_kernel, 0, LOCAL_GROUP_SIZE,
                                                             LOCAL_GROUP_SIZE);
     assert(error == 0);
+    _unused(error);
 
     // read output
     error = opencl_connector.queue.enqueueReadBuffer(output, CL_TRUE, 0, sizeof(float_type) * NUM_LETTERS,

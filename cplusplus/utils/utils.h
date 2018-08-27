@@ -18,3 +18,4 @@ size_t get_file_size(const std::string& filename);
 size_t levenstein_distance(const char* first, const char* second, size_t message_size);
 size_t levenstein_distance(const std::string& first, const std::string& second);
 
+#define _unused(x) ((void)(x))

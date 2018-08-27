@@ -11,26 +11,21 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/make_unique.hpp>
 
-#include "update-regions.h"
-
-Compressor::Compressor(const UpdateRegionSet& update_region_set, size_t message_size)
+Compressor::Compressor(const DataSet& dataset, size_t message_size)
     : message_size(message_size) {
-    for (const UpdateRegion& update_region : update_region_set.update_regions) {
-        for (const std::string& token : update_region.tokens) {
-            decompress_map[compress(token)].push_back(token);
+    for (const std::string& country : dataset.get_countries()) {
+        decompress_map[compress(country)].push_back(country);
+    }
+    for (const DataSet::CitiesStreets& cities_streets : dataset.get_cities_streets()) {
+        for (const std::string& city : cities_streets.keys) {
+            decompress_map[compress(city)].push_back(city);
+        }
+        for (const DataSet::Streets& streets : cities_streets.values) {
+            for (const std::string& street : streets.values) {
+                decompress_map[compress(street)].push_back(street);
+            }
         }
     }
-    size_t num_collisions = 0;
-    size_t num_total = 0;
-    for (const auto& item : decompress_map) {
-        size_t current = item.second.size();
-        num_total += current;
-        if (current > 1) {
-            num_collisions += current;
-        }
-    }
-    std::cout << "compressor: " << num_collisions << " collisions of " << num_total
-              << ": " << static_cast<double>(num_collisions) / static_cast<double>(num_total) << std::endl;
 }
 
 std::string Compressor::compress(const std::string& token) const {

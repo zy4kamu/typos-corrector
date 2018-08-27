@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "common.h"
+#include "../utils/utils.h"
 
 namespace NNetworkHypoSearcher {
 
@@ -37,6 +38,7 @@ OpenCLConnector::OpenCLConnector() {
     // setup clBLAS
     int error = clblasSetup();
     assert(error == CL_SUCCESS);
+    _unused(error);
 }
 
 cl::Buffer OpenCLConnector::read_buffer_from_file(const boost::filesystem::path& input_file, size_t size,
@@ -47,6 +49,7 @@ cl::Buffer OpenCLConnector::read_buffer_from_file(const boost::filesystem::path&
     assert(data.size() == size);
     int error = queue.enqueueWriteBuffer(buffer, CL_TRUE, 0, sizeof(float_type) * size, data.data());
     assert(error == 0);
+    _unused(error);
     return buffer;
 }
 
@@ -75,6 +78,7 @@ void OpenCLConnector::vector_matrix_multiply(const cl::Buffer& vector, const cl:
                 NULL,            // eventWaitList
                 NULL);           // events
     assert(status == clblasSuccess);
+    _unused(status);
 }
 
 void OpenCLConnector::add_to_vector(const cl::Buffer& to_add, cl::Buffer& vector, int_type size) {
@@ -94,6 +98,7 @@ void OpenCLConnector::add_to_vector(const cl::Buffer& to_add, cl::Buffer& vector
                 NULL,         // eventWaitList
                 NULL);        // events
     assert(status == clblasSuccess);
+    _unused(status);
 }
 
 } // namespace NOpenCLConnector

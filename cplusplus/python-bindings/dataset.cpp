@@ -45,14 +45,14 @@ DataSet::DataSet(const boost::filesystem::path& input_folder) {
     distribution = std::discrete_distribution<size_t>(counters.begin(), counters.end());
 }
 
-std::tuple<std::string, std::string, std::string> DataSet::get_random_item(std::mt19937& generator) {
+std::tuple<std::string, std::string, std::string> DataSet::get_random_item(std::mt19937& generator) const {
     size_t index = distribution(generator);
     const std::string& country = keys[index];
-    CitiesStreets& cities_streets = values[index];
+    const CitiesStreets& cities_streets = values[index];
 
     index = cities_streets.distribution(generator);
     const std::string& city = cities_streets.keys[index];
-    Streets& streets = cities_streets.values[index];
+    const Streets& streets = cities_streets.values[index];
 
     index = streets.distribution(generator);
     const std::string& street = streets.values[index];

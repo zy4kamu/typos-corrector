@@ -484,7 +484,7 @@ if __name__ == '__main__':
     model_file = model_file if not model_file is None else 'model/model-1/model'
 
     cpp_bindings.generate_cpp_bindings(ngrams_file=args.ngrams_file,
-                                       update_regions_folder=args.input_folder,
+                                       dataset_folder=args.input_folder,
                                        mistake_probability=args.mistake_probability,
                                        message_size=args.message_size)
 

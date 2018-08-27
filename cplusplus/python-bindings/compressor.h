@@ -4,11 +4,11 @@
 #include <map>
 #include <vector>
 
-struct UpdateRegionSet;
+#include "dataset.h"
 
 class Compressor {
 public:
-    Compressor(const UpdateRegionSet& update_region_set, size_t message_size);
+    Compressor(const DataSet& dataset, size_t message_size);
     std::string compress(const std::string& decompressed) const;
     const std::vector<std::string>& decompress(const std::string& compressed) const;
     std::vector<std::string> find_by_prefix(const std::string& prefix, size_t max_number) const;

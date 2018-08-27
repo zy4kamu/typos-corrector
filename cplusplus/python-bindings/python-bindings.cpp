@@ -9,28 +9,28 @@
 
 #include "compressor.h"
 #include "contaminator.h"
+#include "dataset.h"
 #include "random-batch-generator.h"
-#include "update-regions.h"
 #include "../utils/utils.h"
 
 extern "C" {
 
-boost::filesystem::path               UPDATE_REGIONS_FOLDER;
+boost::filesystem::path               DATASET_FOLDER;
 std::unique_ptr<Compressor>           COMPRESSOR;
 std::unique_ptr<Contaminator>         CONTAMINATOR;
-std::unique_ptr<UpdateRegionSet>      UPDATE_REGION_SET;
+std::unique_ptr<DataSet>              DATASET;
 std::unique_ptr<RandomBatchGenerator> BATCH_GENERATOR;
 
-void set_update_regions_folder(const char* input_folder) {
-    assert(UPDATE_REGIONS_FOLDER.empty());
-    UPDATE_REGIONS_FOLDER = input_folder;
-    assert(boost::filesystem::exists(UPDATE_REGIONS_FOLDER));
+void set_dataset_folder(const char* input_folder) {
+    assert(DATASET_FOLDER.empty());
+    DATASET_FOLDER = input_folder;
+    assert(boost::filesystem::exists(DATASET_FOLDER));
 }
 
-void create_update_regions_set() {
-    assert(!UPDATE_REGIONS_FOLDER.empty());
-    assert(!UPDATE_REGION_SET);
-    UPDATE_REGION_SET = boost::make_unique<UpdateRegionSet>(UPDATE_REGIONS_FOLDER);
+void create_dataset() {
+    assert(!DATASET_FOLDER.empty());
+    assert(!DATASET);
+    DATASET = boost::make_unique<DataSet>(DATASET_FOLDER);
 }
 
 void create_contaminator(const char* ngrams_file, double mistake_probability) {
@@ -39,9 +39,9 @@ void create_contaminator(const char* ngrams_file, double mistake_probability) {
 }
 
 void create_compressor(size_t message_size) {
-    assert(UPDATE_REGION_SET);
+    assert(DATASET);
     assert(!COMPRESSOR);
-    COMPRESSOR = boost::make_unique<Compressor>(*UPDATE_REGION_SET, message_size);
+    COMPRESSOR = boost::make_unique<Compressor>(*DATASET, message_size);
 }
 
 void decompress(const char* token, char* output) {
@@ -71,19 +71,14 @@ void find_by_prefix(const char* prefix, size_t max_size, char* output) {
 }
 
 void create_random_batch_generator() {
-    assert(UPDATE_REGION_SET);
+    assert(DATASET);
     assert(!BATCH_GENERATOR);
-    BATCH_GENERATOR = boost::make_unique<RandomBatchGenerator>(*UPDATE_REGION_SET, *CONTAMINATOR, *COMPRESSOR);
+    BATCH_GENERATOR = boost::make_unique<RandomBatchGenerator>(*DATASET, *CONTAMINATOR, *COMPRESSOR);
 }
 
-int32_t generate_random_batch_on_one_update_region(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size) {
+void generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size) {
     assert(BATCH_GENERATOR);
-    return BATCH_GENERATOR->generate_random_batch_on_one_ur(clean_batch, contaminated_batch, batch_size);
-}
-
-void generate_random_batch_on_all_update_regions(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size) {
-    assert(BATCH_GENERATOR);
-    BATCH_GENERATOR->generate_random_batch_on_all_urs(clean_batch, contaminated_batch, batch_size);
+    BATCH_GENERATOR->generate_random_batch(clean_batch, contaminated_batch, batch_size);
 }
 
 size_t levenstein(const char* first, const char* second, size_t message_size) {

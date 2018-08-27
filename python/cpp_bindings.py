@@ -6,12 +6,12 @@ _library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.
 MESSAGE_SIZE = None
 
 
-def generate_cpp_bindings(ngrams_file='model/ngrams', update_regions_folder='model/update-regions',
+def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/dataset',
                           mistake_probability=0.2, message_size=15):
     global MESSAGE_SIZE
     MESSAGE_SIZE = message_size
-    _set_update_regions_folder(update_regions_folder)
-    _create_update_regions_set()
+    _set_dataset_folder(dataset_folder)
+    _create_dataset()
     _create_contaminator(ngrams_file, mistake_probability)
     _create_compressor(message_size)
     _create_random_batch_generator()
@@ -30,23 +30,15 @@ def find_by_prefix(token, max_number):
     return filter(lambda x: len(x) > 0, decompressed.strip().split('|'))
 
 
-def generate_random_batch(batch_size, use_one_update_region=True):
+def generate_random_batch(batch_size):
     clean = np.empty([batch_size, MESSAGE_SIZE], dtype=np.int32)
     contaminated = np.empty([batch_size, MESSAGE_SIZE], dtype=np.int32)
-    if use_one_update_region:
-        function = _library.generate_random_batch_on_one_update_region
-        function.restype = ctypes.c_int32
-        update_region_id = function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                                    contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                                    ctypes.c_size_t(batch_size))
-        return update_region_id, clean, contaminated
-    else:
-        function = _library.generate_random_batch_on_all_update_regions
-        function.restype = ctypes.c_int32
-        function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                 contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-                 ctypes.c_size_t(batch_size))
-        return clean, contaminated
+    function = _library.generate_random_batch
+    function.restype = ctypes.c_int32
+    function(clean.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+             contaminated.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+             ctypes.c_size_t(batch_size))
+    return clean, contaminated
 
 
 def levenstein(first_message, second_message):
@@ -61,12 +53,12 @@ def levenstein(first_message, second_message):
 # Helpers
 
 
-def _set_update_regions_folder(update_regions_folder):
-    _library.set_update_regions_folder(ctypes.c_char_p(update_regions_folder))
+def _set_dataset_folder(dataset_folder):
+    _library.set_dataset_folder(ctypes.c_char_p(dataset_folder))
 
 
-def _create_update_regions_set():
-    _library.create_update_regions_set()
+def _create_dataset():
+    _library.create_dataset()
 
 
 def _create_contaminator(ngrams_file, mistake_probability):

@@ -39,10 +39,10 @@ bool HypoNodePointerComparator::operator()(const HypoNode* first, const HypoNode
     return (first->logit > second->logit) || ((first->logit == second->logit) && (first > second));
 }
 
-HypoSearcher::HypoSearcher(const boost::filesystem::path& update_regions_folder,
+HypoSearcher::HypoSearcher(const boost::filesystem::path& dataset_folder,
                            const boost::filesystem::path& lstm_folder,
                            const boost::filesystem::path& first_mistake_file)
-    : automata(lstm_folder), update_regions(update_regions_folder), compressor(update_regions, MESSAGE_SIZE) {
+    : automata(lstm_folder), dataset(dataset_folder), compressor(dataset, MESSAGE_SIZE) {
     read_first_mistake_statistics(first_mistake_file);
 }
 

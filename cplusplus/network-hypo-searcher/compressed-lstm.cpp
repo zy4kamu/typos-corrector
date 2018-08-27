@@ -78,6 +78,7 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     program = cl::Program(opencl_connector.context, sources);
     int error = program.build();
     assert(error == 0);
+    _unused(error);
 
     // create kernel for lstm cell computation
     lstm_cell_kernel = cl::Kernel(program, "lstm_cell", &error);
@@ -126,16 +127,19 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
 void CompressedLSTMCell::make_all_buffers_zero() {
     int error = opencl_connector.queue.enqueueNDRangeKernel(initialize_buffers_kernel, 0, lstm_size, 1);
     assert(error == 0);
+    _unused(error);
 }
 
 void CompressedLSTMCell::store_current_hypo_pass() {
     int error = opencl_connector.queue.enqueueNDRangeKernel(store_current_hypo_pass_kernel, 0, lstm_size, 1);
     assert(error == 0);
+    _unused(error);
 }
 
 void CompressedLSTMCell::reset_current_hypo_pass() {
     int error = opencl_connector.queue.enqueueNDRangeKernel(reset_current_hypo_pass_kernel, 0, lstm_size, 1);
     assert(error == 0);
+    _unused(error);
 }
 
 void CompressedLSTMCell::get_output(std::vector<float_type>& output) const {
@@ -143,12 +147,14 @@ void CompressedLSTMCell::get_output(std::vector<float_type>& output) const {
     int error = opencl_connector.queue.enqueueReadBuffer(hidden_buffer, CL_TRUE, 0, sizeof(float_type) * lstm_size,
                                                          output.data());
     assert(error == 0);
+    _unused(error);
 }
 
 void CompressedLSTMCell::process(size_t one_hot_index, size_t model_index) {
     calculate_ijfo(one_hot_index, model_index);
     int error = opencl_connector.queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1);
     assert(error == 0);
+    _unused(error);
 }
 
 void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_index) {
@@ -162,6 +168,7 @@ void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_ind
     set_input_kernel.setArg(1, one_hot_index);
     int error = opencl_connector.queue.enqueueNDRangeKernel(set_input_kernel, 0, input_size, 1);
     assert(error == 0);
+    _unused(error);
 
     // multiply on left matrix
     opencl_connector.vector_matrix_multiply(input_and_hidden_buffer, left_matrix_buffer, input_size + lstm_size,

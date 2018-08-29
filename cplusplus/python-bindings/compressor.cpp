@@ -26,6 +26,12 @@ Compressor::Compressor(const DataSet& dataset, size_t message_size)
             }
         }
     }
+    for (auto& item : decompress_map) {
+        std::vector<std::string>& values = item.second;
+        std::sort(values.begin(), values.end());
+        auto iter = std::unique(values.begin(), values.end());
+        values.resize(std::distance(values.begin(), iter));
+    }
 }
 
 std::string Compressor::compress(const std::string& token) const {

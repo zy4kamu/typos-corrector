@@ -7,8 +7,8 @@ library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.s
 A_INT = np.int32(ord('a'))
 Z_INT = np.int32(ord('z'))
 SPACE_INT = Z_INT - A_INT + 1
-NUM_SYMBOLS = SPACE_INT + 1
-SEPARATOR_INT = SPACE_INT + 2
+SEPARATOR_INT = SPACE_INT + 1
+NUM_SYMBOLS = SEPARATOR_INT + 1
 
 def acceptable(letter): 
     return letter == ' ' or letter == '|' or (ord('a') <= ord(letter) and ord(letter) <= ord('z'))

@@ -11,28 +11,35 @@
 
 const int32_t A_INT = static_cast<int32_t>('a');
 const int32_t Z_INT = static_cast<int32_t>('z');
-const size_t NUM_LETTERS = Z_INT - A_INT + 2;
+const int32_t SPACE_INT = Z_INT - A_INT + 1;
+const int32_t SEPARATOR_INT = SPACE_INT + 1;
+const size_t NUM_LETTERS = SEPARATOR_INT + 1;
 
 bool acceptable(char ch) {
-    return ch == ' ' || ('a' <= ch && ch <= 'z');
+    return ch == ' ' || ch == '|' || ('a' <= ch && ch <= 'z');
 }
 
 int32_t to_int(char ch) {
     assert(acceptable(ch));
-    if (ch == ' ') {
-       return Z_INT - A_INT + 1;
+    switch (ch) {
+    case ' ': return SPACE_INT;
+    case '|': return SEPARATOR_INT;
+    default: return static_cast<int32_t>(ch) - A_INT;
     }
-    return static_cast<int32_t>(ch) - A_INT;
 }
 
 char to_char(int32_t number) {
-    assert(0 <= number && number <= Z_INT - A_INT + 1);
-    return number == Z_INT - A_INT + 1 ? ' ' : static_cast<char>(A_INT + number);
+    assert(0 <= number && number < static_cast<int32_t>(NUM_LETTERS));
+    switch (number) {
+        case SPACE_INT: return ' ';
+        case SEPARATOR_INT: return '|';
+        default: return static_cast<char>(A_INT + number);
+    }
 }
 
 std::string clean_token(const std::string& token) {
     std::string cleaned;
-    for (char ch: token) {
+    for (char ch : token) {
         ch = static_cast<char>(std::tolower(ch));
         if (acceptable(ch)) {
             cleaned += ch;
@@ -40,7 +47,6 @@ std::string clean_token(const std::string& token) {
     }
     return cleaned;
 }
-
 
 template<typename Out>
 void split(const std::string &s, char delim, Out result) {

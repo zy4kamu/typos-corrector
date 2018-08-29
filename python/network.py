@@ -49,13 +49,11 @@ class Network(object):
         train_num_correct = 0
         train_num_letters = 0
 
-        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size,
-                                                                                       use_one_update_region=False)
+        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size)
 
         with tf.device("/device:GPU:0"):
             test_logits = self.__create_output_logits(test_batch_size)
             train_logits = self.__create_output_logits(batch_size)
-            zzzzz_logits = self.__create_zzzzzz_logit()
 
             # create loss which we want to minimize and optimizer to make optimization
             clean_one_hot_embedding = tf.one_hot(self.clean_tokens, utils.NUM_SYMBOLS)
@@ -99,8 +97,6 @@ class Network(object):
                 test_num_correct = 0
                 test_num_letters = 0
                 dummy_num_correct = 0
-                zzzzzzz, = self.sess.run([zzzzz_logits], feed_dict={})
-                print 'ZZZZZZ', zzzzzzz, 'max: ', np.argmax(zzzzzzz)
                 predictions, = self.sess.run([test_logits], feed_dict={ self.contaminated_tokens:contaminated_test_batch,
                                                                         self.clean_tokens:clean_test_batch })
                 test_num_letters += test_batch_size * message_size
@@ -125,8 +121,7 @@ class Network(object):
                 print ''
 
             # update gradient
-            clean, contaminated = cpp_bindings.generate_random_batch(batch_size,
-                                                                     use_one_update_region=False)
+            clean, contaminated = cpp_bindings.generate_random_batch(batch_size)
             _, predictions, l = self.sess.run([optimizer, train_logits, total_loss],
                 feed_dict={ self.clean_tokens:clean, self.contaminated_tokens:contaminated })
 
@@ -208,33 +203,6 @@ class Network(object):
             logits.append(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias)
             output, state = self.decode_lstm(clean_embedding[:, i, :], state)
         return logits
-
-    def __create_zzzzzz_logit(self):
-        """
-        token = 'sloterdijk'
-        token += ' ' * (message_size - len(token))
-        clean_tokens = np.empty([1, message_size], dtype=np.int32)
-        for i in range(message_size):
-            clean_tokens[0, i] = utils.char_to_int(token[i])
-        clean_embedding = tf.one_hot(clean_tokens, utils.NUM_SYMBOLS)
-        logits = []
-        state = self.encode_lstm.zero_state(batch_size, tf.float32)
-        for i in range(message_size):
-            output, state = self.encode_lstm(self.contaminated_embedding[:, message_size - i - 1, :], state)
-        for i in range(message_size):
-            logits.append(tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias)
-            output, state = self.decode_lstm(clean_embedding[:, i, :], state)
-        return logits
-        """
-        token = 'sloterdijk'
-        token += ' ' * (message_size - len(token))
-        state = self.encode_lstm.zero_state(1, tf.float32)
-        for i in range(message_size):
-            letter = utils.char_to_int(token[message_size - i - 1])
-            clean_embedding = tf.one_hot(letter * tf.ones(1, dtype=np.int32), utils.NUM_SYMBOLS)
-            output, state = self.encode_lstm(clean_embedding, state)
-        output = tf.matmul(output, self.hidden_layer_weights) + self.hidden_layer_bias
-        return output
 
 class NetworkAutomata(Network):
     def __init__(self):
@@ -471,7 +439,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
                         choices=['train', 'continue', 'play', 'test', 'listen', 'check'])
-    parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/update-regions')
+    parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/dataset')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
@@ -503,8 +471,7 @@ if __name__ == '__main__':
     elif args.command == 'test':
         first_mistake_statistics = np.zeros(message_size + 1)
         automata = NetworkAutomata()
-        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size,
-                                                                                       use_one_update_region=False)
+        clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size)
         num_correct_chars = 0
         num_all_chars = 0
         for _ in range(test_batch_size):

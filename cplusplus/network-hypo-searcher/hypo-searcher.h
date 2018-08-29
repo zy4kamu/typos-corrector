@@ -40,7 +40,9 @@ public:
 private:
     void read_first_mistake_statistics(const boost::filesystem::path& first_mistake_file);
     void reset();
-    std::vector<std::string> find_max_prefix(const std::string& token, size_t& max_prefix_length) const;
+    std::vector<std::vector<std::string>> find_max_prefix_several_tokens(const std::string& string,
+                                                                         size_t& max_prefix_length) const;
+    std::vector<std::string> find_max_prefix_one_token(const std::string& token, size_t& max_prefix_length) const;
 
     NetworkAutomata         automata;
     std::vector<float_type> first_mistake_statistics;

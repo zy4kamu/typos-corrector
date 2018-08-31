@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <cassert>
+#include <dirent.h>
 #include <iostream>
 #include <iterator>
 #include <sstream>
@@ -8,12 +9,14 @@
 #include <vector>
 
 #include <sys/stat.h>
+#include <sys/types.h>
 
 const int32_t A_INT = static_cast<int32_t>('a');
 const int32_t Z_INT = static_cast<int32_t>('z');
 const int32_t SPACE_INT = Z_INT - A_INT + 1;
 const int32_t SEPARATOR_INT = SPACE_INT + 1;
-const size_t NUM_LETTERS = SEPARATOR_INT + 1;
+const size_t EFFECTIVE_NUM_LETTERS = SEPARATOR_INT + 1;
+const size_t NUM_LETTERS = 32;
 
 bool acceptable(char ch) {
     return ch == ' ' || ch == '|' || ('a' <= ch && ch <= 'z');
@@ -29,7 +32,7 @@ int32_t to_int(char ch) {
 }
 
 char to_char(int32_t number) {
-    assert(0 <= number && number < static_cast<int32_t>(NUM_LETTERS));
+    assert(0 <= number && number < static_cast<int32_t>(EFFECTIVE_NUM_LETTERS));
     switch (number) {
         case SPACE_INT: return ' ';
         case SEPARATOR_INT: return '|';
@@ -126,4 +129,19 @@ size_t levenstein_distance(const char* first, const char* second, size_t message
     }
   }
   return grid[0];
+}
+
+
+std::vector<std::string> read_directory(const std::string& name) {
+    std::vector<std::string> content;
+    DIR* dirp = opendir(name.c_str());
+    struct dirent * dp;
+    while ((dp = readdir(dirp)) != NULL) {
+        std::string name = dp->d_name;
+        if (!name.empty() && name[0] != '.') {
+            content.push_back(std::move(name));
+        }
+    }
+    closedir(dirp);
+    return content;
 }

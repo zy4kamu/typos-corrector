@@ -4,7 +4,6 @@
 #include <memory>
 #include <sstream>
 
-#include <boost/filesystem.hpp>
 #include <boost/make_unique.hpp>
 
 #include "../dataset/compressor.h"
@@ -15,7 +14,7 @@
 
 extern "C" {
 
-boost::filesystem::path               DATASET_FOLDER;
+std::string               DATASET_FOLDER;
 std::unique_ptr<Compressor>           COMPRESSOR;
 std::unique_ptr<Contaminator>         CONTAMINATOR;
 std::unique_ptr<DataSet>              DATASET;
@@ -24,7 +23,6 @@ std::unique_ptr<RandomBatchGenerator> BATCH_GENERATOR;
 void set_dataset_folder(const char* input_folder) {
     assert(DATASET_FOLDER.empty());
     DATASET_FOLDER = input_folder;
-    assert(boost::filesystem::exists(DATASET_FOLDER));
 }
 
 void create_dataset() {

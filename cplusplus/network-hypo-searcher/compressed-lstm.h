@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/filesystem/path.hpp>
-
 #include "../opencl-connector/opencl-connector.h"
 #include "common.h"
 
@@ -15,7 +13,7 @@ using OpenCLConnector = NOpenCLConnector::OpenCLConnector;
 
 class CompressedLSTMCell {
 public:
-    CompressedLSTMCell(OpenCLConnector& connector, const boost::filesystem::path& input_folder, const std::vector<std::string>& models);
+    CompressedLSTMCell(OpenCLConnector& connector, const std::string& input_folder, const std::vector<std::string>& models);
     void process(size_t one_hot_index, size_t model_index = 0);
     void get_output(std::vector<float_type>& output) const;
     int_type get_input_size() const { return input_size; }

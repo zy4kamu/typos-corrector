@@ -102,7 +102,7 @@ void HypoSearcher::reset() {
 std::vector<std::string> HypoSearcher::search(const std::string& input_token) {
     // encode message and prepare automata
     reset();
-    std::vector<float_type> probabilities(NUM_LETTERS);
+    std::vector<float_type> probabilities(EFFECTIVE_NUM_LETTERS);
     automata.encode_message(input_token, probabilities);
 
     size_t counter = 0;
@@ -118,7 +118,7 @@ std::vector<std::string> HypoSearcher::search(const std::string& input_token) {
 
         for (size_t i = hypo.length(); i < MESSAGE_SIZE; ++i) {
             // update automata nodes
-            for (size_t j = 0; j < NUM_LETTERS; ++j) {
+            for (size_t j = 0; j < EFFECTIVE_NUM_LETTERS; ++j) {
                 char letter_to_add = to_char(static_cast<int32_t>(j));
                 float_type logit = current_node->logit + std::log(probabilities[j]) + first_mistake_statistics[i + 1] -
                         first_mistake_statistics[i];
@@ -130,7 +130,7 @@ std::vector<std::string> HypoSearcher::search(const std::string& input_token) {
                 size_t index = argmax(probabilities);
                 char ch = to_char(static_cast<int32_t>(index));
                 hypo += ch;
-                for (size_t j = 0; j < NUM_LETTERS; ++j) {
+                for (size_t j = 0; j < EFFECTIVE_NUM_LETTERS; ++j) {
                     if (j != index) {
                         nodes_to_process.insert(&current_node->transitions[j]);
                     }
@@ -252,8 +252,8 @@ std::vector<std::string> HypoSearcher::find_max_prefix_one_token(const std::stri
     return hypos;
 }
 
-void HypoSearcher::read_first_mistake_statistics(const boost::filesystem::path& first_mistake_file) {
-    std::ifstream reader(first_mistake_file.string());
+void HypoSearcher::read_first_mistake_statistics(const std::string& first_mistake_file) {
+    std::ifstream reader(first_mistake_file);
     std::string line;
     while (getline(reader, line)) {
         first_mistake_statistics.push_back(static_cast<float_type>(std::stof(line) + 1.0));

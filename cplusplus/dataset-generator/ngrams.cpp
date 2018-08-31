@@ -15,7 +15,7 @@ Ngrams::Ngrams(const std::string& input_file): ngram_size(0) {
         const std::string& ngram = splitted[0];
         assert(ngram_size == 0 || ngram_size == ngram.length());
         ngram_size = ngram.length();
-        transition_probs[ngram].resize(NUM_LETTERS, 0);
+        transition_probs[ngram].resize(EFFECTIVE_NUM_LETTERS, 0);
         const char next_char = splitted[1][0];
         const double counter = std::stod(splitted[2]);
         transition_probs[ngram][to_int(next_char)] = counter;

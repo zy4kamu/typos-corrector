@@ -8,7 +8,7 @@ A_INT = np.int32(ord('a'))
 Z_INT = np.int32(ord('z'))
 SPACE_INT = Z_INT - A_INT + 1
 SEPARATOR_INT = SPACE_INT + 1
-NUM_SYMBOLS = SEPARATOR_INT + 1
+NUM_SYMBOLS = 32
 
 def acceptable(letter): 
     return letter == ' ' or letter == '|' or (ord('a') <= ord(letter) and ord(letter) <= ord('z'))

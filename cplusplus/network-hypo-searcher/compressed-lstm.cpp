@@ -9,14 +9,14 @@
 namespace NNetworkHypoSearcher {
 
 CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
-                                       const boost::filesystem::path& input_folder,
+                                       const std::string& input_folder,
                                        const std::vector<std::string>& models)
     : opencl_connector(opencl_connector) {
 
     // read parameters from file
     for (size_t i = 0; i < models.size(); ++i) {
         //  get sizes
-        const std::string model_prefix = (input_folder / models[i]).string();
+        const std::string model_prefix = input_folder + "/" + models[i];
         int_type local_lstm_size = static_cast<int_type>(get_file_size(model_prefix + "bias")) / (4 * sizeof(float_type));
         int_type local_compressor_size = static_cast<int_type>(get_file_size(model_prefix + "right_matrix") /
                                                            (4 * sizeof(float_type) * local_lstm_size));

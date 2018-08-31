@@ -1,25 +1,26 @@
 #include "opencl-connector.h"
 
 #include <cassert>
-#include <clBLAS.h>
 #include <fstream>
 
 #include "common.h"
-#include "../utils/utils.h"
+#include "clBLAS.h"
 
-namespace NNetworkHypoSearcher {
+namespace NOpenCLConnector {
 
 namespace {
 
-std::vector<float_type> read_file(const boost::filesystem::path& filename) {
+std::vector<float_type> read_file(const std::string& filename) {
     std::vector<float_type> data;
-    std::ifstream file(filename.string(), std::ios::binary);
+    std::ifstream file(filename, std::ios::binary);
     float_type item;
     while (file.read(reinterpret_cast<char*>(&item), sizeof(float_type))) {
         data.push_back(item);
     }
     return data;
 }
+
+#define _unused(x) ((void)(x))
 
 } // anonymous namespace
 
@@ -41,7 +42,7 @@ OpenCLConnector::OpenCLConnector() {
     _unused(error);
 }
 
-cl::Buffer OpenCLConnector::read_buffer_from_file(const boost::filesystem::path& input_file, size_t size,
+cl::Buffer OpenCLConnector::read_buffer_from_file(const std::string& input_file, size_t size,
                                                   int memory_permissions) {
     // TODO: memory map directly to GPU
     cl::Buffer buffer(context, memory_permissions, sizeof(float_type) * size);

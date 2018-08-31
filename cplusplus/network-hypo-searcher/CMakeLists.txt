@@ -12,9 +12,8 @@ add_library(lstm SHARED compressed-lstm.cpp
                         hypo-searcher.cpp
                         network-automata.cpp 
                         network-automata.cl 
-                        opencl-connector.cpp 
                         common.h)
-target_link_libraries(lstm utils python-bindings OpenCL cblas clBLAS boost_filesystem boost_system)
+target_link_libraries(lstm dataset opencl-connector utils)
 
 add_executable(lstm-app main.cpp)
 target_link_libraries(lstm-app lstm)

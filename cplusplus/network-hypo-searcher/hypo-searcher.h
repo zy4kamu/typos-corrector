@@ -3,13 +3,12 @@
 #include <memory>
 #include <map>
 #include <set>
+#include <string>
 #include <vector>
-
-#include <boost/filesystem/path.hpp>
 
 #include "common.h"
 #include "network-automata.h"
-#include "../python-bindings/compressor.h"
+#include "../dataset/compressor.h"
 
 namespace NNetworkHypoSearcher {
 
@@ -33,9 +32,9 @@ using AutomataNodesSet = std::set<HypoNode*, HypoNodePointerComparator>;
 
 class HypoSearcher {
 public:
-    HypoSearcher(const boost::filesystem::path& dataset_folder,
-                 const boost::filesystem::path& lstm_folder,
-                 const boost::filesystem::path& first_mistake_file);
+    HypoSearcher(const std::string& dataset_folder,
+                 const std::string& lstm_folder,
+                 const std::string& first_mistake_file);
     std::vector<std::string> search(const std::string& input_token);
 private:
     void read_first_mistake_statistics(const boost::filesystem::path& first_mistake_file);

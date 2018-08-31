@@ -1,6 +1,6 @@
 #include "random-batch-generator.h"
 
-#include "compressor.h"
+#include "../dataset/compressor.h"
 #include "../utils/utils.h"
 
 #include <algorithm>

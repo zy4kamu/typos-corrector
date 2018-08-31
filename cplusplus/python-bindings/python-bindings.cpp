@@ -7,10 +7,10 @@
 #include <boost/filesystem.hpp>
 #include <boost/make_unique.hpp>
 
-#include "compressor.h"
-#include "contaminator.h"
-#include "dataset.h"
-#include "random-batch-generator.h"
+#include "../dataset/compressor.h"
+#include "../dataset/dataset.h"
+#include "../dataset-generator/contaminator.h"
+#include "../dataset-generator/random-batch-generator.h"
 #include "../utils/utils.h"
 
 extern "C" {

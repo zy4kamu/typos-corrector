@@ -19,12 +19,12 @@ int get_letter(const std::string& message, size_t position) {
 
 } // anonymous namespace
 
-NetworkAutomata::NetworkAutomata(const boost::filesystem::path& input_folder)
+NetworkAutomata::NetworkAutomata(const std::string& input_folder)
     : lstm(opencl_connector, input_folder, { "encode_lstm_", "decode_lstm_" })
-    , hidden_layer_weights(opencl_connector.read_buffer_from_file(input_folder / "hidden_layer_weights",
+    , hidden_layer_weights(opencl_connector.read_buffer_from_file(input_folder + "/hidden_layer_weights",
                                                                   lstm.get_output_size() * NUM_LETTERS,
                                                                   CL_MEM_WRITE_ONLY))
-    , hidden_layer_bias(opencl_connector.read_buffer_from_file(input_folder / "hidden_layer_bias",
+    , hidden_layer_bias(opencl_connector.read_buffer_from_file(input_folder + "/hidden_layer_bias",
                                                                NUM_LETTERS,
                                                                CL_MEM_WRITE_ONLY))
     , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * LOCAL_GROUP_SIZE) {

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <cl2.hpp>
+#include "../opencl-connector/common.h"
 
 namespace NNetworkHypoSearcher {
 
-using float_type = cl_float;
+using float_type = NOpenCLConnector::float_type;
 using int_type = cl_int;
 static const size_t MESSAGE_SIZE = 25;
 

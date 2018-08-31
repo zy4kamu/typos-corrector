@@ -6,10 +6,12 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "opencl-connector.h"
+#include "../opencl-connector/opencl-connector.h"
 #include "common.h"
 
 namespace NNetworkHypoSearcher {
+
+using OpenCLConnector = NOpenCLConnector::OpenCLConnector;
 
 class CompressedLSTMCell {
 public:

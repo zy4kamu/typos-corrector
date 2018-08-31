@@ -8,7 +8,7 @@ import utils
 
 def create_dataset(input_file, output_folder):
     def line_contain_address(line):
-        """ Checks whether linee from SQL dump contains address """
+        """ Checks whether line from SQL dump contains address """
         splitted = line.split(',')
         return len(splitted) > 6 and splitted[6] == ' 2' and \
                line.startswith('INSERT INTO poiSecondaryAttributes(poiId, grp, typeId, typeFormat, val) VALUES')

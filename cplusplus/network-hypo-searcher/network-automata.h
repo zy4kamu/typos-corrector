@@ -1,9 +1,9 @@
 #pragma once
 
 #include "compressed-lstm.h"
-#include "opencl-connector.h"
+#include "../opencl-connector/opencl-connector.h"
 
-#include <boost/filesystem/path.hpp>
+#include <string>
 #include <vector>
 
 #include "common.h"
@@ -12,7 +12,7 @@ namespace NNetworkHypoSearcher {
 
 class NetworkAutomata {
 public:
-    NetworkAutomata(const boost::filesystem::path& input_folder);
+    NetworkAutomata(const std::string& input_folder);
     void encode_message(const std::string& messsage, std::vector<float_type>& first_letter_logits);
     void reset();
     void apply(char letter, std::vector<float_type>& next_letter_logits);

@@ -1,5 +1,4 @@
 #include "opencl-connector.h"
-#include "gemm-processor.h"
 
 #include <iostream>
 #include <vector>

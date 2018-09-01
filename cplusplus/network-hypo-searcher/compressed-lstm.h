@@ -4,14 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "../opencl-connector/gemm-processor.h"
 #include "../opencl-connector/opencl-connector.h"
 #include "common.h"
 
 namespace NNetworkHypoSearcher {
 
 using OpenCLConnector = NOpenCLConnector::OpenCLConnector;
-using GEMMProcessor = NOpenCLConnector::GEMMProcessor;
 
 class CompressedLSTMCell {
 public:

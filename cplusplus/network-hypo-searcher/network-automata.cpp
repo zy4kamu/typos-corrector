@@ -4,7 +4,6 @@
 // TODO: don't like naming conventions in this file (LOCAL_GROUP_SIZE is bad name, for example)
 
 #include <cassert>
-#include <fstream>
 
 #include "common.h"
 
@@ -16,6 +15,37 @@ const size_t LOCAL_GROUP_SIZE = 32;
 int get_letter(const std::string& message, size_t position) {
     return position < message.length() ? to_int(message[position]) : to_int(' ');
 }
+
+const char* PROGRAM_SOURCES =
+"__kernel void initialize_logits(__global float* logits) {           \n"
+"    size_t global_id = get_global_id(0);                            \n"
+"    logits[global_id] = -1024;                                      \n"
+"}                                                                   \n"
+"                                                                    \n"
+"// NOTE: this kernel must be called with 1 local group of size 32   \n"
+"__kernel void logits_to_probabilities(__global float* buffer) {     \n"
+"    size_t global_id = get_global_id(0);                            \n"
+"                                                                    \n"
+"    // create local buffer                                          \n"
+"    __local float sum_buffer[32];                                   \n"
+"                                                                    \n"
+"    // exponent all logits                                          \n"
+"    buffer[global_id] = exp(buffer[global_id]);                     \n"
+"                                                                    \n"
+"    // get normalization factor                                     \n"
+"    sum_buffer[global_id] = buffer[global_id];                      \n"
+"    for (int shift = 16; shift > 0; shift >>= 1) {                  \n"
+"        barrier(CLK_LOCAL_MEM_FENCE);                               \n"
+"        if (global_id < shift) {                                    \n"
+"            sum_buffer[global_id] += sum_buffer[global_id + shift]; \n"
+"        }                                                           \n"
+"    }                                                               \n"
+"    barrier(CLK_LOCAL_MEM_FENCE);                                   \n"
+"    float normalization_factor = sum_buffer[0];                     \n"
+"                                                                    \n"
+"    // get probabilities                                            \n"
+"    buffer[global_id] /= normalization_factor;                      \n"
+"}                                                                   \n";
 
 } // anonymous namespace
 
@@ -29,13 +59,8 @@ NetworkAutomata::NetworkAutomata(const std::string& input_folder)
                                                                CL_MEM_WRITE_ONLY))
     , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * LOCAL_GROUP_SIZE) {
 
-    // get source code
-    std::ifstream reader(std::string(ROOT_DIRECTORY) + "/network-automata.cl");
-    std::string src(std::istreambuf_iterator<char>(reader), (std::istreambuf_iterator<char>()));
-    assert(src.size() > 0);
-    sources = cl::Program::Sources(1, src);
-
-    // build program
+    // build program from sources
+    sources = cl::Program::Sources(1, PROGRAM_SOURCES);
     program = cl::Program(opencl_connector.context, sources);
     int error = program.build();
     assert(error == 0);

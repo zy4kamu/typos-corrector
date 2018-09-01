@@ -13,10 +13,8 @@ if (${PLATFORM} MATCHES ANDROID)
 endif ()
 
 add_library(network-hypo-searcher SHARED compressed-lstm.cpp
-                                         compressed-lstm.cl
                                          hypo-searcher.cpp
                                          network-automata.cpp
-                                         network-automata.cl
                                          common.h)
 target_link_libraries(network-hypo-searcher dataset opencl-connector utils)
 

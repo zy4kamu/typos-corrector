@@ -1,7 +1,6 @@
 #include "compressed-lstm.h"
 
 #include <cassert>
-#include <fstream>
 
 #include <boost/make_unique.hpp>
 
@@ -9,6 +8,65 @@
 #include "../utils/utils.h"
 
 namespace NNetworkHypoSearcher {
+
+namespace {
+
+const char* PROGRAM_SOURCES =
+"__kernel void reset(__global float* hidden_buffer, __global float* state_buffer,                                   \n"
+"                    int input_size, int lstm_size) {                                                               \n"
+"    int global_id = get_global_id(0);                                                                              \n"
+"    hidden_buffer[global_id] = 0;                                                                                  \n"
+"    state_buffer[global_id] = 0;                                                                                   \n"
+"}                                                                                                                  \n"
+"                                                                                                                   \n"
+"__kernel void copy_hidden_and_state_buffers(__global float* to_hidden_buffer, __global float* from_hidden_buffer,  \n"
+"                                            __global float* to_state_buffer, __global float* from_state_buffer) {  \n"
+"    int global_id = get_global_id(0);                                                                              \n"
+"    to_hidden_buffer[global_id] = from_hidden_buffer[global_id];                                                   \n"
+"    to_state_buffer[global_id] = from_state_buffer[global_id];                                                     \n"
+"}                                                                                                                  \n"
+"                                                                                                                   \n"
+"__kernel void set_input(__global float* input_buffer, int one_hot_index) {                                         \n"
+"    int global_id = get_global_id(0);                                                                              \n"
+"    if (global_id == one_hot_index) {                                                                              \n"
+"        input_buffer[global_id] = 1;                                                                               \n"
+"    } else {                                                                                                       \n"
+"        input_buffer[global_id] = 0;                                                                               \n"
+"    }                                                                                                              \n"
+"}                                                                                                                  \n"
+"                                                                                                                   \n"
+"float sigmoid(float value) {                                                                                       \n"
+"    return 1. / (1. + exp(-value));                                                                                \n"
+"}                                                                                                                  \n"
+"                                                                                                                   \n"
+"float hyperbolic_tangent(float value) {                                                                            \n"
+"    float exp_activation = exp(-2.0 * value);                                                                      \n"
+"    return (1. - exp_activation) / (1. + exp_activation);                                                          \n"
+"}                                                                                                                  \n"
+"                                                                                                                   \n"
+"__kernel void lstm_cell(__global float* hidden_buffer, __global float* state_buffer,                               \n"
+"                        __global float* ijfo_buffer, int input_size, int lstm_size)                                \n"
+"{                                                                                                                  \n"
+"    // unpack gates                                                                                                \n"
+"    size_t global_id = get_global_id(0);                                                                           \n"
+"    float input_gate      = *(ijfo_buffer                 + global_id);                                            \n"
+"    float activation_gate = *(ijfo_buffer +     lstm_size + global_id);                                            \n"
+"    float forget_gate     = *(ijfo_buffer + 2 * lstm_size + global_id);                                            \n"
+"    float output_gate     = *(ijfo_buffer + 3 * lstm_size + global_id);                                            \n"
+"                                                                                                                   \n"
+"    // forget information                                                                                          \n"
+"    __global float* state = state_buffer + global_id;                                                              \n"
+"    *state *= sigmoid(1. + forget_gate);                                                                           \n"
+"                                                                                                                   \n"
+"    // update information                                                                                          \n"
+"    *state += sigmoid(input_gate) * hyperbolic_tangent(activation_gate);                                           \n"
+"                                                                                                                   \n"
+"    // update output                                                                                               \n"
+"    __global float* hidden = hidden_buffer + global_id;                                                            \n"
+"    *hidden = hyperbolic_tangent(*state) * sigmoid(output_gate);                                                   \n"
+"}                                                                                                                  \n";
+
+} // anonymous namespace
 
 CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
                                        const std::string& input_folder,
@@ -70,13 +128,8 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
                                                                          CL_MEM_WRITE_ONLY));
     }
 
-    // get source code
-    std::ifstream reader(std::string(ROOT_DIRECTORY) + "/compressed-lstm.cl");
-    std::string src(std::istreambuf_iterator<char>(reader), (std::istreambuf_iterator<char>()));
-    assert(src.size() > 0);
-    sources = cl::Program::Sources(1, src);
-
-    // build program
+    // build program from sources
+    sources = cl::Program::Sources(1, PROGRAM_SOURCES);
     program = cl::Program(opencl_connector.context, sources);
     int error = program.build();
     assert(error == 0);

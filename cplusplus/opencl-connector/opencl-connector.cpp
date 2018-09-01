@@ -19,6 +19,35 @@ std::vector<float_type> read_file(const std::string& filename) {
     return data;
 }
 
+const char* PROGRAM_SOURCES =
+"__kernel void intermediate_multipilcation(__global float* vector, __global float* matrix, int num_rows, int num_cols, \n"
+"                                          __global float* output) {                                                   \n"
+"    int global_id = get_global_id(0);                                                                                 \n"
+"    int row_index = global_id / num_cols;                                                                             \n"
+"    int col_index = global_id % num_cols;                                                                             \n"
+"    vector += 32 * row_index;                                                                                         \n"
+"    matrix += 32 * row_index * num_cols + col_index;                                                                  \n"
+"    float value = 0;                                                                                                  \n"
+"    for (int i = 0; i < 32; ++i) {                                                                                    \n"
+"        value += vector[i] * matrix[i * num_cols];                                                                    \n"
+"    }                                                                                                                 \n"
+"    output[row_index * num_cols + col_index] = value;                                                                 \n"
+"}                                                                                                                     \n"
+"                                                                                                                      \n"
+"__kernel void final_sum(__global float* buffer, int num_rows, int num_cols, __global float* output) {                 \n"
+"    int col_index = get_global_id(0);                                                                                 \n"
+"    float value = 0;                                                                                                  \n"
+"    for (int i = 0; i < num_rows; ++i) {                                                                              \n"
+"        value += buffer[i * num_cols + col_index];                                                                    \n"
+"    }                                                                                                                 \n"
+"    output[col_index] = value;                                                                                        \n"
+"}                                                                                                                     \n"
+"                                                                                                                      \n"
+"__kernel void add_to_vector(__global float* to_add, __global float* output) {                                         \n"
+"    int global_id = get_global_id(0);                                                                                 \n"
+"    output[global_id] += to_add[global_id];                                                                           \n"
+"}                                                                                                                     \n";
+
 #define _unused(x) ((void)(x))
 
 } // anonymous namespace
@@ -74,13 +103,8 @@ OpenCLConnector::OpenCLConnector() {
     context = cl::Context(device);
     queue = cl::CommandQueue(context, device);
 
-    // get source code
-    std::ifstream reader(std::string(ROOT_DIRECTORY) + "/gemm-processor.cl");
-    std::string src(std::istreambuf_iterator<char>(reader), (std::istreambuf_iterator<char>()));
-    assert(src.size() > 0);
-    sources = cl::Program::Sources(1, src);
-
-    // build program
+    // build program from sources
+    sources = cl::Program::Sources(1, PROGRAM_SOURCES);
     program = cl::Program(context, sources);
     int error = program.build();
     assert(error == 0);

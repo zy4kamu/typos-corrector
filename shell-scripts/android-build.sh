@@ -1,21 +1,41 @@
 #!/bin/bash
 
+android_env_folder=/tmp/android-env-folder
+android_tmp_folder=/data/local/tmp
+application_folder=../android-application
+build_folder=$android_env_folder/build
+input_folder=../cplusplus
+src_folder=$android_env_folder/typos-corrector
+
+# create virtual environment for android build
+if [ ! -d $android_env_folder ]; then
+    make_standalone_toolchain.py --arch arm --stl=libc++ --install-dir $android_env_folder
+fi
+
+# definitions for android build
 export LD_LIBRARY_PATH=""
 export CPLUS_INCLUDE_DIRECTORY=""
+export CC="$android_env_folder/bin/clang"
+export CXX="$android_env_folder/bin/clang++"
 
-ANDROID_FOLDER=/tmp/android-dev-folder
-PROJECT_FOLDER=../cplusplus
-
-#rm -rf ${ANDROID_FOLDER}
-#make_standalone_toolchain.py --arch arm --stl=libc++ --install-dir ${ANDROID_FOLDER}
-export CC="${ANDROID_FOLDER}/bin/clang"
-export CXX="${ANDROID_FOLDER}/bin/clang++"
-
-rm -rf ${ANDROID_FOLDER}/cplusplus
-rm -rf ${ANDROID_FOLDER}/build
-cp -R ${PROJECT_FOLDER} ${ANDROID_FOLDER}/cplusplus
-mkdir ${ANDROID_FOLDER}/build
-pushd ${ANDROID_FOLDER}/build
-cmake ../cplusplus -DCMAKE_BUILD_TYPE=RELEASE -DPLATFORM=ANDROID -DBUILD_PYTHON_BINDINGS=OFF
+# build project
+rsync -avz $input_folder/ $src_folder/
+if [ ! -d $build_folder ]; then
+    mkdir $build_folder
+fi
+pushd $build_folder
+cmake $src_folder -DCMAKE_BUILD_TYPE=RELEASE -DPLATFORM=ANDROID -DBUILD_PYTHON_BINDINGS=OFF
 make
 popd
+
+# copy application to the output folder
+rm -rf $application_folder
+mkdir $application_folder
+cp $build_folder/network-hypo-searcher/network-hypo-searcher $application_folder
+cp -R ../python/model/dataset $application_folder
+cp -R ../python/model/parameters $application_folder
+cp -R ../python/model/first-mistake-statistics $application_folder
+
+# copy application to device and connect there
+adb push $application_folder $android_tmp_folder
+adb shell cd $android_tmp_folder

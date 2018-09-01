@@ -54,34 +54,6 @@ cl::Buffer OpenCLConnector::read_buffer_from_file(const std::string& input_file,
     return buffer;
 }
 
-void OpenCLConnector::vector_matrix_multiply(const cl::Buffer& vector, const cl::Buffer& matrix, int_type matrix_num_rows,
-                                             int_type matrix_num_cols, cl::Buffer& output) {
-    cl_command_queue local_queue = queue.get();
-    clblasStatus status =
-    clblasSgemv(clblasRowMajor,  // order
-                clblasTrans,     // transA
-                matrix_num_rows, // M
-                matrix_num_cols, // N
-                1.f,             // alpha
-                matrix.get(),    // A
-                0,               // offA
-                matrix_num_cols, // lda
-                vector.get(),    // x
-                0,               // offx
-                1,               // incx
-                0,               // beta
-                output.get(),    // y
-                0,               // offy
-                1,               // incy
-                1,               // numCommandQueues
-                &local_queue,    // commandQueues
-                0,               // numEventsInWaitList
-                NULL,            // eventWaitList
-                NULL);           // events
-    assert(status == clblasSuccess);
-    _unused(status);
-}
-
 void OpenCLConnector::add_to_vector(const cl::Buffer& to_add, cl::Buffer& vector, int_type size) {
     cl_command_queue local_queue = queue.get();
     int status =

@@ -12,8 +12,8 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CL")
 
 file(GLOB OpenCLHeaders "CL/*.h")
 
-add_library(opencl-connector SHARED matrix-multiplicator.cpp 
-                                    matrix-multiplicator.cl
+add_library(opencl-connector SHARED gemm-processor.cpp 
+                                    gemm-processor.cl
                                     opencl-connector.cpp 
                                     cl2.hpp 
                                     common.h 

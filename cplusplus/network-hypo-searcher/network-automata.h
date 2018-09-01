@@ -1,6 +1,7 @@
 #pragma once
 
 #include "compressed-lstm.h"
+#include "../opencl-connector/gemm-processor.h"
 #include "../opencl-connector/opencl-connector.h"
 
 #include <string>

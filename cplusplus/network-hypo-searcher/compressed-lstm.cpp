@@ -3,6 +3,8 @@
 #include <cassert>
 #include <fstream>
 
+#include <boost/make_unique.hpp>
+
 #include "common.h"
 #include "../utils/utils.h"
 
@@ -122,6 +124,10 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     store_current_hypo_pass_kernel.setArg(2, stored_state_buffer);
     store_current_hypo_pass_kernel.setArg(3, state_buffer);
     store_current_hypo_pass_kernel.setArg(4, lstm_size);
+
+    // create matrix multiplicators
+    first_matrix_multiplicator = boost::make_unique<MatrixMultiplicator>(opencl_connector, input_size + lstm_size, compressor_size);
+    second_matrix_multiplicator = boost::make_unique<MatrixMultiplicator>(opencl_connector, compressor_size, 4 * lstm_size);
 }
 
 void CompressedLSTMCell::make_all_buffers_zero() {
@@ -170,15 +176,9 @@ void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_ind
     assert(error == 0);
     _unused(error);
 
-    // multiply on left matrix
-    opencl_connector.vector_matrix_multiply(input_and_hidden_buffer, left_matrix_buffer, input_size + lstm_size,
-                                            compressor_size, intermediate_matrix_buffer);
-
-    // multiply on right matrix
-    opencl_connector.vector_matrix_multiply(intermediate_matrix_buffer, right_matrix_buffer,
-                                            compressor_size, 4 * lstm_size, ijfo_buffer);
-
-    // add bias
+    // calculate ijfo
+    first_matrix_multiplicator->vector_matrix_multiply(input_and_hidden_buffer, left_matrix_buffer, intermediate_matrix_buffer);
+    second_matrix_multiplicator->vector_matrix_multiply(intermediate_matrix_buffer, right_matrix_buffer, ijfo_buffer);
     opencl_connector.add_to_vector(bias_buffer, ijfo_buffer, 4 * lstm_size);
 }
 

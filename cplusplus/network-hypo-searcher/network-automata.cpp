@@ -74,9 +74,7 @@ void NetworkAutomata::apply(char letter, std::vector<float_type>& next_letter_lo
 
 void NetworkAutomata::get_output(std::vector<float_type>& first_letter_logits) {
     // linear transform of lstm output
-    matrix_multiplicator.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights, NUM_LETTERS, output);
-    //opencl_connector.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights,
-    //                                        lstm.get_output_size(), NUM_LETTERS, output);
+    matrix_multiplicator.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights, output);
     opencl_connector.add_to_vector(hidden_layer_bias, output, NUM_LETTERS);
 
     // logits to probabilities

@@ -1,5 +1,5 @@
 #include "opencl-connector.h"
-#include "matrix-multiplicator.h"
+#include "gemm-processor.h"
 
 #include <iostream>
 #include <vector>
@@ -24,8 +24,8 @@ int main()
     connector.queue.enqueueWriteBuffer(matrix_buffer, CL_TRUE, 0, sizeof(float_type) * 512 * 32, matrix.data());
 
     cl::Buffer output_buffer(connector.context, CL_MEM_READ_WRITE, sizeof(float_type) * 32);
-    NOpenCLConnector::MatrixMultiplicator multiplicator(connector, 512, 32);
-    multiplicator.vector_matrix_multiply(vector_buffer, matrix_buffer, 32, output_buffer);
+    NOpenCLConnector::GEMMProcessor multiplicator(connector, 512, 32);
+    multiplicator.vector_matrix_multiply(vector_buffer, matrix_buffer, output_buffer);
     std::vector<float_type> output(32);
     connector.queue.enqueueReadBuffer(output_buffer, CL_TRUE, 0, sizeof(float_type) * 32, output.data());
     for (const float_type item : output) {

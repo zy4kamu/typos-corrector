@@ -4,14 +4,14 @@
 #include <string>
 #include <vector>
 
-#include "../opencl-connector/matrix-multiplicator.h"
+#include "../opencl-connector/gemm-processor.h"
 #include "../opencl-connector/opencl-connector.h"
 #include "common.h"
 
 namespace NNetworkHypoSearcher {
 
 using OpenCLConnector = NOpenCLConnector::OpenCLConnector;
-using MatrixMultiplicator = NOpenCLConnector::MatrixMultiplicator;
+using MatrixMultiplicator = NOpenCLConnector::GEMMProcessor;
 
 class CompressedLSTMCell {
 public:
@@ -62,6 +62,9 @@ private:
     // kernels for reset between trying different hypos
     cl::Buffer              stored_state_buffer;
     cl::Buffer              stored_hidden_buffer;
+
+    std::unique_ptr<MatrixMultiplicator> first_matrix_multiplicator;
+    std::unique_ptr<MatrixMultiplicator> second_matrix_multiplicator;
 };
 
 } // namespace NOpenCLConnector

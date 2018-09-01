@@ -4,12 +4,14 @@
 #include <string>
 #include <vector>
 
+#include "../opencl-connector/matrix-multiplicator.h"
 #include "../opencl-connector/opencl-connector.h"
 #include "common.h"
 
 namespace NNetworkHypoSearcher {
 
 using OpenCLConnector = NOpenCLConnector::OpenCLConnector;
+using MatrixMultiplicator = NOpenCLConnector::MatrixMultiplicator;
 
 class CompressedLSTMCell {
 public:

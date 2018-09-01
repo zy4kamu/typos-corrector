@@ -7,7 +7,7 @@ __kernel void intermediate_multipilcation(__global float* vector, __global float
     matrix += 32 * row_index * num_cols + col_index;
     float value = 0;
     for (int i = 0; i < 32; ++i) {
-        value += vector[i] + matrix[i * num_cols];
+        value += vector[i] * matrix[i * num_cols];
     }
     output[row_index * num_cols + col_index] = value;
 }

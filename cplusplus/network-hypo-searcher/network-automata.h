@@ -27,6 +27,8 @@ private:
     cl::Buffer         hidden_layer_weights;
     cl::Buffer         hidden_layer_bias;
     cl::Buffer         output;
+
+    MatrixMultiplicator matrix_multiplicator;
 };
 
 } // namespace NOpenCLConnector

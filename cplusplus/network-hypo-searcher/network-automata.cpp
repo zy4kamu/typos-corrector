@@ -27,7 +27,8 @@ NetworkAutomata::NetworkAutomata(const std::string& input_folder)
     , hidden_layer_bias(opencl_connector.read_buffer_from_file(input_folder + "/hidden_layer_bias",
                                                                NUM_LETTERS,
                                                                CL_MEM_WRITE_ONLY))
-    , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * LOCAL_GROUP_SIZE) {
+    , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * LOCAL_GROUP_SIZE)
+    , matrix_multiplicator(opencl_connector, lstm.get_output_size(), NUM_LETTERS) {
 
     // get source code
     std::ifstream reader(std::string(ROOT_DIRECTORY) + "/network-automata.cl");
@@ -73,8 +74,9 @@ void NetworkAutomata::apply(char letter, std::vector<float_type>& next_letter_lo
 
 void NetworkAutomata::get_output(std::vector<float_type>& first_letter_logits) {
     // linear transform of lstm output
-    opencl_connector.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights,
-                                            lstm.get_output_size(), NUM_LETTERS, output);
+    matrix_multiplicator.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights, NUM_LETTERS, output);
+    //opencl_connector.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights,
+    //                                        lstm.get_output_size(), NUM_LETTERS, output);
     opencl_connector.add_to_vector(hidden_layer_bias, output, NUM_LETTERS);
 
     // logits to probabilities

@@ -8,6 +8,7 @@ add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
 add_definitions(-DROOT_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CLBLAS")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CL")
 
 file(GLOB OpenCLHeaders "CL/*.h")
 

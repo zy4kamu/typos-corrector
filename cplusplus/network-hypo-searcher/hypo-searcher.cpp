@@ -102,7 +102,7 @@ void HypoSearcher::reset() {
 std::vector<std::string> HypoSearcher::search(const std::string& input_token) {
     // encode message and prepare automata
     reset();
-    std::vector<float_type> probabilities(EFFECTIVE_NUM_LETTERS);
+    std::vector<float_type> probabilities(NUM_LETTERS);
     automata.encode_message(input_token, probabilities);
 
     size_t counter = 0;

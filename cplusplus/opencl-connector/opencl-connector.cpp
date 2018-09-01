@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <fstream>
+#include <iostream>
 
 #include "common.h"
 
@@ -65,6 +66,8 @@ MatrixMultiplicator::MatrixMultiplicator(OpenCLConnector& opencl_connector, cons
 }
 
 void MatrixMultiplicator::operator()(const cl::Buffer& vector, const cl::Buffer& matrix, cl::Buffer& output) {
+    clock_t begin = clock();
+
     // intermediate_kernel
     int error = 0;
     cl::Kernel intermediate_kernel = cl::Kernel(*program, "intermediate_multipilcation", &error);
@@ -85,8 +88,14 @@ void MatrixMultiplicator::operator()(const cl::Buffer& vector, const cl::Buffer&
     final_sum_kernel.setArg(1, num_rows / 32);
     final_sum_kernel.setArg(2, num_cols);
     final_sum_kernel.setArg(3, output);
-    error = opencl_connector->queue.enqueueNDRangeKernel(final_sum_kernel, 0, num_cols, 1);
+    cl::Event event;
+    error = opencl_connector->queue.enqueueNDRangeKernel(final_sum_kernel, 0, num_cols, 1, NULL, &event);
+    event.wait();
     assert(error == 0);
+
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    std::cout << "multiplied matrix in " << elapsed_secs << " (" << num_rows << ", " << num_cols << ")\n";
 }
 
 // OpenCLConnector class

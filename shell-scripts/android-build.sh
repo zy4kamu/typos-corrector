@@ -32,11 +32,11 @@ popd
 rm -rf $application_folder
 mkdir $application_folder
 cp $build_folder/network-hypo-searcher/network-hypo-searcher $application_folder
-cp -R ../python/model/dataset $application_folder
+#cp -R ../python/model/dataset $application_folder
 cp -R ../python/model/parameters $application_folder
 cp -R ../python/model/first-mistake-statistics $application_folder
 
 # copy application to device and connect there
-adb shell rm -r $device_application_folder
+#adb shell rm -r $device_application_folder
 adb shell mkdir -p $device_application_folder
 adb push $application_folder $device_application_folder

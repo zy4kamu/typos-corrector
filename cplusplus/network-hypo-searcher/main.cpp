@@ -9,10 +9,11 @@ void test_hypo_searcher(int argc, char* argv[]) {
     std::string input_folder;
     if (argc > 1) {
         input_folder = argv[1];
+        input_folder += "/";
     }
-    HypoSearcher searcher(input_folder + "/dataset/",
-                          input_folder + "/parameters/",
-                          input_folder + "/first-mistake-statistics");
+    HypoSearcher searcher(input_folder + "dataset/",
+                          input_folder + "parameters/",
+                          input_folder + "first-mistake-statistics");
     std::string input;
     while (true) {
         std::cout << "Input something: ";

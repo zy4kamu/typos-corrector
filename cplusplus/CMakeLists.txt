@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(typos-corrector)
 
+option(BUILD_PYTHON_BINDINGS "Build library used by python wrapper" ON)
+option(BUILD_HYPO_SEARCHER   "Build complete C++ application"       ON)
+
+################### SET COMPILER AND LINKER FLAGS ###################
 if (${PLATFORM} MATCHES ANDROID)
     MESSAGE(WARNING "Building for Android")
     SET(COMMON_CXX_FLAGS "-std=c++14 -Wall -Werror -Wno-missing-braces")
@@ -18,9 +22,17 @@ else ()
     SET(CMAKE_CXX_FLAGS "-O0 -g ${COMMON_CXX_FLAGS}")
 endif ()
 
-add_subdirectory(dataset)
-add_subdirectory(dataset-generator)
-add_subdirectory(network-hypo-searcher)
-add_subdirectory(opencl-connector)
-add_subdirectory(python-bindings)
+########################## LOAD PROJECTS #############################
+
 add_subdirectory(utils)
+add_subdirectory(dataset)
+
+if (BUILD_PYTHON_BINDINGS)
+    add_subdirectory(dataset-generator)
+    add_subdirectory(python-bindings)
+endif (BUILD_PYTHON_BINDINGS)
+
+if (BUILD_HYPO_SEARCHER)
+    add_subdirectory(network-hypo-searcher)
+    add_subdirectory(opencl-connector)
+endif()

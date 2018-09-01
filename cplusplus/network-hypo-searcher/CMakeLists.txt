@@ -7,6 +7,11 @@ add_definitions(-DCL_HPP_MINIMUM_OPENCL_VERSION=120)
 add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
 add_definitions(-DROOT_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
 
+if (${PLATFORM} MATCHES ANDROID)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector")
+    link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector/lib")
+endif ()
+
 add_library(network-hypo-searcher SHARED compressed-lstm.cpp
                                          compressed-lstm.cl
                                          hypo-searcher.cpp

@@ -25,7 +25,7 @@ struct HypoNode {
 };
 
 struct HypoNodePointerComparator {
-    bool operator()(const HypoNode* first, const HypoNode* second);
+    bool operator()(const HypoNode* first, const HypoNode* second) const;
 };
 
 using AutomataNodesSet = std::set<HypoNode*, HypoNodePointerComparator>;

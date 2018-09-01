@@ -80,7 +80,7 @@ const size_t MAX_NUMBER_OF_ATTEMPTS = 100;
 
 } // anonymous namespace
 
-bool HypoNodePointerComparator::operator()(const HypoNode* first, const HypoNode* second) {
+bool HypoNodePointerComparator::operator()(const HypoNode* first, const HypoNode* second) const {
     assert(first != nullptr);
     assert(second != nullptr);
     return (first->logit > second->logit) || ((first->logit == second->logit) && (first > second));

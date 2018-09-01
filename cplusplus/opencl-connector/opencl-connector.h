@@ -7,7 +7,7 @@
 
 namespace NOpenCLConnector {
 
-class OpenCLConnector;
+struct OpenCLConnector;
 
 class MatrixMultiplicator {
 public:
@@ -22,7 +22,7 @@ private:
     int_type           num_cols;
     cl::Buffer         intermediate_buffer;
 
-    friend class OpenCLConnector;
+    friend struct OpenCLConnector;
 };
 
 struct OpenCLConnector {

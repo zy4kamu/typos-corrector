@@ -7,7 +7,10 @@ add_definitions(-DCL_HPP_MINIMUM_OPENCL_VERSION=120)
 add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
 add_definitions(-DROOT_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/CL")
+if (${PLATFORM} MATCHES ANDROID)
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+    link_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib")
+endif ()
 
 file(GLOB OpenCLHeaders "CL/*.h")
 

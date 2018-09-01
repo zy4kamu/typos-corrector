@@ -14,7 +14,7 @@
 
 extern "C" {
 
-std::string               DATASET_FOLDER;
+std::string                           DATASET_FOLDER;
 std::unique_ptr<Compressor>           COMPRESSOR;
 std::unique_ptr<Contaminator>         CONTAMINATOR;
 std::unique_ptr<DataSet>              DATASET;

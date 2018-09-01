@@ -63,8 +63,8 @@ private:
     cl::Buffer              stored_state_buffer;
     cl::Buffer              stored_hidden_buffer;
 
-    std::unique_ptr<GEMMProcessor> first_gemm_processor;
-    std::unique_ptr<GEMMProcessor> second_gemm_processor;
+    NOpenCLConnector::MatrixMultiplicator first_matrix_multiplicator;
+    NOpenCLConnector::MatrixMultiplicator second_matrix_multiplicator;
 };
 
 } // namespace NOpenCLConnector

@@ -12,11 +12,9 @@ if (${PLATFORM} MATCHES ANDROID)
     link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector/lib")
 endif ()
 
-add_library(network-hypo-searcher SHARED compressed-lstm.cpp
-                                         hypo-searcher.cpp
-                                         network-automata.cpp
-                                         common.h)
+add_executable(network-hypo-searcher compressed-lstm.cpp
+                                     hypo-searcher.cpp
+                                     network-automata.cpp
+                                     common.h
+                                     main.cpp)
 target_link_libraries(network-hypo-searcher dataset opencl-connector utils)
-
-add_executable(network-hypo-searcher-app main.cpp)
-target_link_libraries(network-hypo-searcher-app network-hypo-searcher)

@@ -2,6 +2,7 @@
 *.swp
 *.pyc
 *CMakeLists.txt.user
+application/
 build/
 corpus
 dataset

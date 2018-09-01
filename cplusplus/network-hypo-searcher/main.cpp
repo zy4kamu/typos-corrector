@@ -1,13 +1,18 @@
 #include "hypo-searcher.h"
 
 #include <iostream>
+#include <string>
 
 using namespace NNetworkHypoSearcher;
 
-void test_hypo_searcher() {
-    HypoSearcher searcher("/home/stepan/git-repos/typos-corrector/python/model/dataset/",
-                          "/home/stepan/git-repos/typos-corrector/python/model/parameters/",
-                          "/home/stepan/git-repos/typos-corrector/python/model/first-mistake-statistics");
+void test_hypo_searcher(int argc, char* argv[]) {
+    std::string input_folder;
+    if (argc > 1) {
+        input_folder = argv[1];
+    }
+    HypoSearcher searcher(input_folder + "/dataset/",
+                          input_folder + "/parameters/",
+                          input_folder + "/first-mistake-statistics");
     std::string input;
     while (true) {
         std::cout << "Input something: ";
@@ -20,6 +25,6 @@ void test_hypo_searcher() {
     }
 }
 
-int main() {
-    test_hypo_searcher();
+int main(int argc, char* argv[]) {
+    test_hypo_searcher(argc, argv);
 }

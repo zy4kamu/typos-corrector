@@ -64,8 +64,8 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
                                                                                 compressor_size * 4 * lstm_size,
                                                                                 CL_MEM_WRITE_ONLY));
         bias_buffers.emplace_back(opencl_connector.read_buffer_from_file(model_prefix + "bias",
-                                                                                4 * lstm_size,
-                                                                                CL_MEM_WRITE_ONLY));
+                                                                         4 * lstm_size,
+                                                                         CL_MEM_WRITE_ONLY));
     }
 
     // get source code

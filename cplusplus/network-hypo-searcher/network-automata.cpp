@@ -28,7 +28,7 @@ NetworkAutomata::NetworkAutomata(const std::string& input_folder)
                                                                NUM_LETTERS,
                                                                CL_MEM_WRITE_ONLY))
     , output(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * LOCAL_GROUP_SIZE)
-    , matrix_multiplicator(opencl_connector, lstm.get_output_size(), NUM_LETTERS) {
+    , gemm_processor(opencl_connector, lstm.get_output_size(), NUM_LETTERS) {
 
     // get source code
     std::ifstream reader(std::string(ROOT_DIRECTORY) + "/network-automata.cl");
@@ -74,8 +74,8 @@ void NetworkAutomata::apply(char letter, std::vector<float_type>& next_letter_lo
 
 void NetworkAutomata::get_output(std::vector<float_type>& first_letter_logits) {
     // linear transform of lstm output
-    matrix_multiplicator.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights, output);
-    opencl_connector.add_to_vector(hidden_layer_bias, output, NUM_LETTERS);
+    gemm_processor.vector_matrix_multiply(lstm.get_hidden_buffer(), hidden_layer_weights, output);
+    gemm_processor.add_to_vector(hidden_layer_bias, output, NUM_LETTERS);
 
     // logits to probabilities
     int error = opencl_connector.queue.enqueueNDRangeKernel(logits_to_probabilities_kernel, 0, LOCAL_GROUP_SIZE,

@@ -126,8 +126,8 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     store_current_hypo_pass_kernel.setArg(4, lstm_size);
 
     // create matrix multiplicators
-    first_matrix_multiplicator = boost::make_unique<MatrixMultiplicator>(opencl_connector, input_size + lstm_size, compressor_size);
-    second_matrix_multiplicator = boost::make_unique<MatrixMultiplicator>(opencl_connector, compressor_size, 4 * lstm_size);
+    first_gemm_processor = boost::make_unique<GEMMProcessor>(opencl_connector, input_size + lstm_size, compressor_size);
+    second_gemm_processor = boost::make_unique<GEMMProcessor>(opencl_connector, compressor_size, 4 * lstm_size);
 }
 
 void CompressedLSTMCell::make_all_buffers_zero() {
@@ -177,9 +177,9 @@ void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_ind
     _unused(error);
 
     // calculate ijfo
-    first_matrix_multiplicator->vector_matrix_multiply(input_and_hidden_buffer, left_matrix_buffer, intermediate_matrix_buffer);
-    second_matrix_multiplicator->vector_matrix_multiply(intermediate_matrix_buffer, right_matrix_buffer, ijfo_buffer);
-    opencl_connector.add_to_vector(bias_buffer, ijfo_buffer, 4 * lstm_size);
+    first_gemm_processor->vector_matrix_multiply(input_and_hidden_buffer, left_matrix_buffer, intermediate_matrix_buffer);
+    second_gemm_processor->vector_matrix_multiply(intermediate_matrix_buffer, right_matrix_buffer, ijfo_buffer);
+    first_gemm_processor->add_to_vector(bias_buffer, ijfo_buffer, 4 * lstm_size);
 }
 
 } // namespace NOpenCLConnector

@@ -32,6 +32,7 @@ void GEMMProcessor::vector_matrix_multiply(const cl::Buffer& vector, const cl::B
     int error = 0;
     cl::Kernel intermediate_kernel = cl::Kernel(program, "intermediate_multipilcation", &error);
     assert(error == 0);
+    _unused(error);
     intermediate_kernel.setArg(0, vector);
     intermediate_kernel.setArg(1, matrix);
     intermediate_kernel.setArg(2, num_rows);
@@ -39,7 +40,6 @@ void GEMMProcessor::vector_matrix_multiply(const cl::Buffer& vector, const cl::B
     intermediate_kernel.setArg(4, intermediate_buffer);
     error = opencl_connector.queue.enqueueNDRangeKernel(intermediate_kernel, 0, num_rows * num_cols / 32, 1);
     assert(error == 0);
-    _unused(error);
 
     // kernel for final sum calculation
     cl::Kernel final_sum_kernel = cl::Kernel(program, "final_sum", &error);
@@ -49,6 +49,17 @@ void GEMMProcessor::vector_matrix_multiply(const cl::Buffer& vector, const cl::B
     final_sum_kernel.setArg(2, num_cols);
     final_sum_kernel.setArg(3, output);
     error = opencl_connector.queue.enqueueNDRangeKernel(final_sum_kernel, 0, num_cols, 1);
+    assert(error == 0);
+}
+
+void GEMMProcessor::add_to_vector(const cl::Buffer& to_add, cl::Buffer& output, int_type size) {
+    int error = 0;
+    cl::Kernel add_to_vector_kernel = cl::Kernel(program, "add_to_vector", &error);
+    assert(error == 0);
+    _unused(error);
+    add_to_vector_kernel.setArg(0, to_add);
+    add_to_vector_kernel.setArg(1, output);
+    error = opencl_connector.queue.enqueueNDRangeKernel(add_to_vector_kernel, 0, size, 1);
     assert(error == 0);
 }
 

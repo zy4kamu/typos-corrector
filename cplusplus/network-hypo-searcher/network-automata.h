@@ -29,7 +29,7 @@ private:
     cl::Buffer         hidden_layer_bias;
     cl::Buffer         output;
 
-    MatrixMultiplicator matrix_multiplicator;
+    GEMMProcessor gemm_processor;
 };
 
 } // namespace NOpenCLConnector

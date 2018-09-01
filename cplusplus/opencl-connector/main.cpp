@@ -28,6 +28,15 @@ int main()
     multiplicator.vector_matrix_multiply(vector_buffer, matrix_buffer, output_buffer);
     std::vector<float_type> output(32);
     connector.queue.enqueueReadBuffer(output_buffer, CL_TRUE, 0, sizeof(float_type) * 32, output.data());
+    std::cout << "matrix multiply: ";
+    for (const float_type item : output) {
+        std::cout << item << " ";
+    }
+    std::cout << std::endl;
+
+    multiplicator.add_to_vector(output_buffer, output_buffer, 32);
+    connector.queue.enqueueReadBuffer(output_buffer, CL_TRUE, 0, sizeof(float_type) * 32, output.data());
+    std::cout << "vector sum: ";
     for (const float_type item : output) {
         std::cout << item << " ";
     }

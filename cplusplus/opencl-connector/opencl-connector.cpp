@@ -54,24 +54,4 @@ cl::Buffer OpenCLConnector::read_buffer_from_file(const std::string& input_file,
     return buffer;
 }
 
-void OpenCLConnector::add_to_vector(const cl::Buffer& to_add, cl::Buffer& vector, int_type size) {
-    cl_command_queue local_queue = queue.get();
-    int status =
-    clblasSaxpy(size,         // N
-                1,            // alpha
-                to_add.get(), // X
-                0,            // offx
-                1,            // incx
-                vector.get(), // Y
-                0,            // offy
-                1,            // incy
-                1,            // numCommandQueues
-                &local_queue, // commandQueues
-                0,            // numEventsInWaitList
-                NULL,         // eventWaitList
-                NULL);        // events
-    assert(status == clblasSuccess);
-    _unused(status);
-}
-
 } // namespace NOpenCLConnector

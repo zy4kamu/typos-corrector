@@ -20,3 +20,8 @@ __kernel void final_sum(__global float* buffer, int num_rows, int num_cols, __gl
     }
     output[col_index] = value;
 }
+
+__kernel void add_to_vector(__global float* to_add, __global float* output) {
+    int global_id = get_global_id(0);
+    output[global_id] += to_add[global_id];
+}

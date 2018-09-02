@@ -20,7 +20,6 @@ private:
     const cl::Program* program;
     int_type           num_rows;
     int_type           num_cols;
-    cl::Buffer         intermediate_buffer;
 
     friend struct OpenCLConnector;
 };

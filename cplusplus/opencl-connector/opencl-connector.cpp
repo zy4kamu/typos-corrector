@@ -20,31 +20,40 @@ std::vector<float_type> read_file(const std::string& filename) {
     return data;
 }
 
+/*
+"    for (int shift = 1; shift < 128; shift <<= 1) {"
+"        if ((local_id + 1) % shift == 0) { buffer[local_id] += buffer[local_id / 2]; }              "
+"        barrier(CLK_LOCAL_MEM_FENCE);                                                                                 \n"
+"    } "
+*/
+
 const char* PROGRAM_SOURCES =
 "__kernel void intermediate_multipilcation(__global float* vector, __global float* matrix, int num_rows, int num_cols, \n"
 "                                          __global float* output) {                                                   \n"
-"    __local float buffer[128]; // MUST EQUAL TO local_size !!!                                                         \n"
-"                                                                                                                      \n"
-"    int global_id = get_global_id(0);                                                                                 \n"
+"    __local float buffer[128];        // MUST EQUAL TO local_size !!!                                                         \n"
+"    __local float vector_buffer[128]; // MUST EQUAL TO local_size !!!                                                         \n"
+"    __local float matrix_buffer[128]; // MUST EQUAL TO local_size !!!                                                         \n"
+
 "    int local_id = get_local_id(0);                                                                                   \n"
+"    int global_id = get_global_id(0);                                                                                 \n"
 "    int local_size = get_local_size(0);                                                                               \n"
-"                                                                                                                      \n"
 "    int row_index = global_id / num_cols;                                                                             \n"
-"    int col_index = global_id % num_cols;                                                                             \n"
-"    matrix += row_index * local_size;                                                                             \n"
-"                                                                                                                      \n"
-"    buffer[local_id] = vector[local_id] * matrix[local_id];                                             \n"
-"    barrier(CLK_LOCAL_MEM_FENCE);                                  // 0.029587 up to here                                                                                   \n"
+
+"    vector_buffer[local_id] = vector[local_id];                                                                                   \n"
+"    matrix_buffer[local_id] = matrix[global_id];                                                                                   \n"
+"    buffer[local_id] = vector_buffer[local_id] * matrix_buffer[local_id];                                             \n"
+"    barrier(CLK_LOCAL_MEM_FENCE);                                  // 0.003398 up to here                                                                                   \n"
+
 "    for (int shift = local_size / 2; shift > 0; shift >>= 1) {                                                        \n"
 "        if (local_id < shift) {                                                                                       \n"
 "            buffer[local_id] += buffer[local_id + shift];                                                             \n"
 "        }                                                                                                             \n"
 "        barrier(CLK_LOCAL_MEM_FENCE);                                                                                 \n"
-"    }                                                            // 0.025672 up to here                                                                                                                  \n"
-"    /*if (local_id == 0) {                                                                                              \n"
-"        float local_value = buffer[0];                                                                                \n"
-"        output[row_index] = local_value;                                          \n"
-"    }*/                                                            //  0.039041 up to here                                                                              \n"
+"    }                                                            // 0.022732 up to here                                                                                                                  \n"
+
+"    if (local_id == 0) {                                                                                              \n"
+"        output[global_id / 128] = buffer[local_id];                                          \n"
+"    }                                                            //  0.023751 up to here                                                                              \n"
 "}                                                                                                                     \n"
 "                                                                                                                      \n"
 "__kernel void add_to_vector(__global float* to_add, __global float* output) {                                         \n"

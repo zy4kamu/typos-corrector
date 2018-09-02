@@ -118,7 +118,7 @@ OpenCLConnector::OpenCLConnector() {
     assert(platforms.size() > 0);
 
     std::vector<cl::Device> devices;
-    platforms.front().getDevices(CL_DEVICE_TYPE_GPU, &devices);
+    platforms.front().getDevices(CL_DEVICE_TYPE_CPU, &devices);
     assert(devices.size() > 0);
     device = devices.front();
 

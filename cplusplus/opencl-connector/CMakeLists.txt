@@ -13,7 +13,8 @@ endif ()
 
 file(GLOB OpenCLHeaders "CL/*.h")
 
-add_library(opencl-connector STATIC opencl-connector.cpp
+add_library(opencl-connector STATIC matrix-multiplication.cl
+                                    opencl-connector.cpp
                                     cl2.hpp 
                                     common.h 
                                     ${OpenCLHeaders})

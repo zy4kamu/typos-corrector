@@ -159,6 +159,7 @@ class Network(object):
             os.mkdir(output_folder)
         for k, v in self.parametes.iteritems():
             [parameter] = self.sess.run([v], feed_dict={})
+            # parameter = np.transpose(parameter)
             parameter.tofile(os.path.join(output_folder, k))
 
     def __initialize_for_training(self):

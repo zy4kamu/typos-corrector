@@ -32,6 +32,7 @@ popd
 rm -rf $application_folder
 mkdir $application_folder
 cp $build_folder/network-hypo-searcher/network-hypo-searcher $application_folder
+cp $build_folder/opencl-connector/opencl-connector-dummy $application_folder
 #cp -R ../python/model/dataset $application_folder
 cp -R ../python/model/parameters $application_folder
 cp -R ../python/model/first-mistake-statistics $application_folder

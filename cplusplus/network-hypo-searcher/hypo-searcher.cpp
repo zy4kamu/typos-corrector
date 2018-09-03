@@ -2,7 +2,6 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include <iostream>
 #include <fstream>
 #include <sstream>
 

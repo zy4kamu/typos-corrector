@@ -2,7 +2,6 @@
 #include "../utils/utils.h"
 
 #include <cassert>
-#include <iostream>
 
 #include "common.h"
 
@@ -90,15 +89,10 @@ void NetworkAutomataGPU::reset() {
 void NetworkAutomataGPU::apply(char letter, std::vector<float_type>& next_letter_logits) {
     lstm.process(to_int(letter), 1);
     get_output(next_letter_logits);
-    // for (const float_type item : next_letter_logits) { std::cout << item << " "; }; std::cout << std::endl;
 }
 
 void NetworkAutomataGPU::get_output(std::vector<float_type>& output_logits) {
     // linear transform of lstm output
-
-    std::vector<float_type> zzzz(lstm.get_output_size()); // delete it !!!!!!
-    lstm.get_output(zzzz);
-
     matrix_multiplicator(lstm.get_hidden_buffer(), hidden_layer_weights, output);
     opencl_connector.add_to_vector(hidden_layer_bias, output, NUM_LETTERS);
 

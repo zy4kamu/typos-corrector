@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include <numeric>
 
 #include "common.h"
 
@@ -53,8 +53,6 @@ void NetworkAutomataCPU::get_output(std::vector<float_type>& output) {
                    [](float_type first, float_type second ) { return first + second; });
     std::transform(output.begin(), output.end(), output.begin(),
                    [normalize_factor](float_type item) { return item / normalize_factor; });
-
-    // for (const float_type item : output) { std::cout << item << " "; }; std::cout << std::endl;
 }
 
 } // namespace NNetworkHypoSearcher

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -13,7 +12,7 @@ class CompressedLSTMCellCPU {
 public:
     CompressedLSTMCellCPU(const std::string& input_folder, const std::vector<std::string>& models);
     void process(size_t one_hot_index, size_t model_index = 0);
-    const float_type* get_output() const { std::cout << hidden_buffer[0] << std::endl; return hidden_buffer; }
+    const float_type* get_output() const { return hidden_buffer; }
     int_type get_input_size() const { return input_size; }
     int_type get_output_size() const { return lstm_size; }
     void make_all_buffers_zero();

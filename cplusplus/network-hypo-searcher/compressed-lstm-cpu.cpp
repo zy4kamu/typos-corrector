@@ -57,10 +57,7 @@ CompressedLSTMCellCPU::CompressedLSTMCellCPU(const std::string& input_folder, co
 }
 
 void CompressedLSTMCellCPU::process(size_t one_hot_index, size_t model_index) {
-    std::cout << "AAAAAAAAAAA " << one_hot_index << std::endl;
     calculate_ijfo(one_hot_index, model_index);
-
-    std::cout << "ZZZZZZZZZZ " << ijfo_buffer[0] << std::endl;
 
     for (int_type i = 0; i < lstm_size; ++i) {
         // unpack gates

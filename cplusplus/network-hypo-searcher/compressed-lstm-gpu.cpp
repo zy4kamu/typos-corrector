@@ -1,7 +1,6 @@
 #include "compressed-lstm-gpu.h"
 
 #include <cassert>
-#include <iostream>
 
 #include <boost/make_unique.hpp>
 
@@ -48,7 +47,6 @@ const char* PROGRAM_SOURCES =
 "__kernel void lstm_cell(__global float* hidden_buffer, __global float* state_buffer,                               \n"
 "                        __global float* ijfo_buffer, int input_size, int lstm_size)                                \n"
 "{                                                                                                                  \n"
-"    if (get_global_id(0) == 0) { printf(\"ZZZZZZZZZZ %lf\\n\", ijfo_buffer[0]); }                                       \n"
 "    // unpack gates                                                                                                \n"
 "    size_t global_id = get_global_id(0);                                                                           \n"
 "    float input_gate      = *(ijfo_buffer                 + global_id);                                            \n"
@@ -207,13 +205,11 @@ void CompressedLSTMCellGPU::get_output(std::vector<float_type>& output) const {
     assert(static_cast<float_type>(output.size()) == lstm_size);
     int error = opencl_connector.queue.enqueueReadBuffer(hidden_buffer, CL_TRUE, 0, sizeof(float_type) * lstm_size,
                                                          output.data());
-    std::cout << output[0] << std::endl;
     assert(error == 0);
     _unused(error);
 }
 
 void CompressedLSTMCellGPU::process(size_t one_hot_index, size_t model_index) {
-    std::cout << "AAAAAAAAAAA " << one_hot_index << std::endl;
     calculate_ijfo(one_hot_index, model_index);
     int error = opencl_connector.queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1);
     assert(error == 0);

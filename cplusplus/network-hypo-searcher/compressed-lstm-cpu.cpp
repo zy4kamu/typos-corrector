@@ -61,10 +61,10 @@ void CompressedLSTMCellCPU::process(size_t one_hot_index, size_t model_index) {
 
     for (int_type i = 0; i < lstm_size; ++i) {
         // unpack gates
-        float input_gate      = ijfo_buffer[i];
-        float activation_gate = ijfo_buffer[lstm_size + i];
-        float forget_gate     = ijfo_buffer[2 * lstm_size + i];
-        float output_gate     = ijfo_buffer[3 * lstm_size + i];
+        float_type input_gate      = ijfo_buffer[i];
+        float_type activation_gate = ijfo_buffer[lstm_size + i];
+        float_type forget_gate     = ijfo_buffer[2 * lstm_size + i];
+        float_type output_gate     = ijfo_buffer[3 * lstm_size + i];
 
         // forget information
         state_buffer[i] *= sigmoid(1. +  forget_gate);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "compressed-lstm.h"
+#include "compressed-lstm-gpu.h"
 #include "../opencl-connector/opencl-connector.h"
 
 #include <string>
@@ -10,25 +10,25 @@
 
 namespace NNetworkHypoSearcher {
 
-class NetworkAutomata {
+class NetworkAutomataGPU {
 public:
-    NetworkAutomata(const std::string& input_folder);
+    NetworkAutomataGPU(const std::string& input_folder);
     void encode_message(const std::string& messsage, std::vector<float_type>& first_letter_logits);
     void reset();
     void apply(char letter, std::vector<float_type>& next_letter_logits);
 private:
-    void get_output(std::vector<float_type>& first_letter_logits);
+    void get_output(std::vector<float_type>& output_logits);
     OpenCLConnector       opencl_connector;
     cl::Program::Sources  sources;
     cl::Program           program;
     cl::Kernel            logits_to_probabilities_kernel;
 
-    CompressedLSTMCell lstm;
-    cl::Buffer         hidden_layer_weights;
-    cl::Buffer         hidden_layer_bias;
-    cl::Buffer         output;
+    CompressedLSTMCellGPU lstm;
+    cl::Buffer            hidden_layer_weights;
+    cl::Buffer            hidden_layer_bias;
+    cl::Buffer            output;
 
     NOpenCLConnector::MatrixMultiplicator matrix_multiplicator;
 };
 
-} // namespace NOpenCLConnector
+} // namespace NNetworkHypoSearcher

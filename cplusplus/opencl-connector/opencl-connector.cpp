@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <fstream>
-#include <iostream>
 
 #include "common.h"
 
@@ -20,40 +19,28 @@ std::vector<float_type> read_file(const std::string& filename) {
     return data;
 }
 
-/*
-"    for (int shift = 1; shift < 128; shift <<= 1) {"
-"        if ((local_id + 1) % shift == 0) { buffer[local_id] += buffer[local_id / 2]; }              "
-"        barrier(CLK_LOCAL_MEM_FENCE);                                                                                 \n"
-"    } "
-*/
-
 const char* PROGRAM_SOURCES =
 "__kernel void intermediate_multipilcation(__global float* vector, __global float* matrix, int num_rows, int num_cols, \n"
 "                                          __global float* output) {                                                   \n"
-"    __local float buffer[128];        // MUST EQUAL TO local_size !!!                                                         \n"
-"    __local float vector_buffer[128]; // MUST EQUAL TO local_size !!!                                                         \n"
-"    __local float matrix_buffer[128]; // MUST EQUAL TO local_size !!!                                                         \n"
-
-"    int local_id = get_local_id(0);                                                                                   \n"
 "    int global_id = get_global_id(0);                                                                                 \n"
-"    int local_size = get_local_size(0);                                                                               \n"
 "    int row_index = global_id / num_cols;                                                                             \n"
-
-"    vector_buffer[local_id] = vector[local_id];                                                                                   \n"
-"    matrix_buffer[local_id] = matrix[global_id];                                                                                   \n"
-"    buffer[local_id] = vector_buffer[local_id] * matrix_buffer[local_id];                                             \n"
-"    barrier(CLK_LOCAL_MEM_FENCE);                                  // 0.003398 up to here                                                                                   \n"
-
-"    for (int shift = local_size / 2; shift > 0; shift >>= 1) {                                                        \n"
-"        if (local_id < shift) {                                                                                       \n"
-"            buffer[local_id] += buffer[local_id + shift];                                                             \n"
-"        }                                                                                                             \n"
-"        barrier(CLK_LOCAL_MEM_FENCE);                                                                                 \n"
-"    }                                                            // 0.022732 up to here                                                                                                                  \n"
-
-"    if (local_id == 0) {                                                                                              \n"
-"        output[global_id / 128] = buffer[local_id];                                          \n"
-"    }                                                            //  0.023751 up to here                                                                              \n"
+"    int col_index = global_id % num_cols;                                                                             \n"
+"    vector += 32 * row_index;                                                                                         \n"
+"    matrix += 32 * row_index * num_cols + col_index;                                                                  \n"
+"    float value = 0;                                                                                                  \n"
+"    for (int i = 0; i < 32; ++i) {                                                                                    \n"
+"        value += vector[i] * matrix[i * num_cols];                                                                    \n"
+"    }                                                                                                                 \n"
+"    output[row_index * num_cols + col_index] = value;                                                                 \n"
+"}                                                                                                                     \n"
+"                                                                                                                      \n"
+"__kernel void final_sum(__global float* buffer, int num_rows, int num_cols, __global float* output) {                 \n"
+"    int col_index = get_global_id(0);                                                                                 \n"
+"    float value = 0;                                                                                                  \n"
+"    for (int i = 0; i < num_rows; ++i) {                                                                              \n"
+"        value += buffer[i * num_cols + col_index];                                                                    \n"
+"    }                                                                                                                 \n"
+"    output[col_index] = value;                                                                                        \n"
 "}                                                                                                                     \n"
 "                                                                                                                      \n"
 "__kernel void add_to_vector(__global float* to_add, __global float* output) {                                         \n"
@@ -73,11 +60,11 @@ MatrixMultiplicator::MatrixMultiplicator(OpenCLConnector& opencl_connector, cons
     // intermediate_buffer
     assert(num_rows % 32 == 0);
     assert(num_cols % 32 == 0);
+    intermediate_buffer = cl::Buffer(opencl_connector.context, CL_MEM_READ_WRITE,
+                                     sizeof(float_type) * num_rows * num_cols / 32);
 }
 
 void MatrixMultiplicator::operator()(const cl::Buffer& vector, const cl::Buffer& matrix, cl::Buffer& output) {
-    clock_t begin = clock();
-
     // intermediate_kernel
     int error = 0;
     cl::Kernel intermediate_kernel = cl::Kernel(*program, "intermediate_multipilcation", &error);
@@ -87,16 +74,19 @@ void MatrixMultiplicator::operator()(const cl::Buffer& vector, const cl::Buffer&
     intermediate_kernel.setArg(1, matrix);
     intermediate_kernel.setArg(2, num_rows);
     intermediate_kernel.setArg(3, num_cols);
-    intermediate_kernel.setArg(4, output);
-    cl::Event event;
-    error = opencl_connector->queue.enqueueNDRangeKernel(intermediate_kernel, 0, num_rows * num_cols, 128, NULL, &event);
-    assert(error == 0);
-    event.wait();
+    intermediate_kernel.setArg(4, intermediate_buffer);
+    error = opencl_connector->queue.enqueueNDRangeKernel(intermediate_kernel, 0, num_rows * num_cols / 32, 1);
     assert(error == 0);
 
-    clock_t end = clock();
-    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-    std::cout << "multiplied matrix in " << elapsed_secs << " (" << num_rows << ", " << num_cols << ")\n";
+    // final_sum_kernel
+    cl::Kernel final_sum_kernel = cl::Kernel(*program, "final_sum", &error);
+    assert(error == 0);
+    final_sum_kernel.setArg(0, intermediate_buffer);
+    final_sum_kernel.setArg(1, num_rows / 32);
+    final_sum_kernel.setArg(2, num_cols);
+    final_sum_kernel.setArg(3, output);
+    error = opencl_connector->queue.enqueueNDRangeKernel(final_sum_kernel, 0, num_cols, 1);
+    assert(error == 0);
 }
 
 // OpenCLConnector class
@@ -114,11 +104,6 @@ OpenCLConnector::OpenCLConnector() {
     queue = cl::CommandQueue(context, device);
 
     // build program from sources
-//    std::ifstream reader("/home/stepan/git-repos/typos-corrector/cplusplus/opencl-connector/matrix-multiplication.cl");
-//    std::string src(std::istreambuf_iterator<char>(reader), (std::istreambuf_iterator<char>()));
-//    assert(src.size() > 0);
-//    src += "\n";
-//    src += PROGRAM_SOURCES;
     sources = cl::Program::Sources(1, PROGRAM_SOURCES);
     program = cl::Program(context, sources);
     int error = program.build();

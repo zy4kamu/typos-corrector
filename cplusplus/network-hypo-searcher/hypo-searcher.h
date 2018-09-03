@@ -7,7 +7,8 @@
 #include <vector>
 
 #include "common.h"
-#include "network-automata.h"
+#include "network-automata-gpu.h"
+#include "network-automata-cpu.h"
 #include "../dataset/compressor.h"
 
 namespace NNetworkHypoSearcher {
@@ -43,7 +44,7 @@ private:
                                                                          size_t& max_prefix_length) const;
     std::vector<std::string> find_max_prefix_one_token(const std::string& token, size_t& max_prefix_length) const;
 
-    NetworkAutomata         automata;
+    NetworkAutomataCPU      automata;
     std::vector<float_type> first_mistake_statistics;
     DataSet                 dataset;
     Compressor              compressor;

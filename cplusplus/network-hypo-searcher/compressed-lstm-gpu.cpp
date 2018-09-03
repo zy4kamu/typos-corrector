@@ -1,6 +1,7 @@
-#include "compressed-lstm.h"
+#include "compressed-lstm-gpu.h"
 
 #include <cassert>
+#include <iostream>
 
 #include <boost/make_unique.hpp>
 
@@ -47,6 +48,7 @@ const char* PROGRAM_SOURCES =
 "__kernel void lstm_cell(__global float* hidden_buffer, __global float* state_buffer,                               \n"
 "                        __global float* ijfo_buffer, int input_size, int lstm_size)                                \n"
 "{                                                                                                                  \n"
+"    if (get_global_id(0) == 0) { printf(\"ZZZZZZZZZZ %lf\\n\", ijfo_buffer[0]); }                                       \n"
 "    // unpack gates                                                                                                \n"
 "    size_t global_id = get_global_id(0);                                                                           \n"
 "    float input_gate      = *(ijfo_buffer                 + global_id);                                            \n"
@@ -68,7 +70,7 @@ const char* PROGRAM_SOURCES =
 
 } // anonymous namespace
 
-CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
+CompressedLSTMCellGPU::CompressedLSTMCellGPU(OpenCLConnector& opencl_connector,
                                        const std::string& input_folder,
                                        const std::vector<std::string>& models)
     : opencl_connector(opencl_connector) {
@@ -106,7 +108,7 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
             input_buffer = input_and_hidden_buffer.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION,
                                                                    &input_buffer_region);
 
-            // kernels for reset between trying different hypos
+            // buffers for reset between trying different hypos
             stored_state_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * lstm_size);
             stored_hidden_buffer = cl::Buffer(opencl_connector.context, CL_MEM_WRITE_ONLY, sizeof(float_type) * lstm_size);
         } else {
@@ -183,40 +185,42 @@ CompressedLSTMCell::CompressedLSTMCell(OpenCLConnector& opencl_connector,
     second_matrix_multiplicator = opencl_connector.create_matrix_multiplicator(compressor_size, 4 * lstm_size);
 }
 
-void CompressedLSTMCell::make_all_buffers_zero() {
+void CompressedLSTMCellGPU::make_all_buffers_zero() {
     int error = opencl_connector.queue.enqueueNDRangeKernel(initialize_buffers_kernel, 0, lstm_size, 1);
     assert(error == 0);
     _unused(error);
 }
 
-void CompressedLSTMCell::store_current_hypo_pass() {
+void CompressedLSTMCellGPU::store_current_hypo_pass() {
     int error = opencl_connector.queue.enqueueNDRangeKernel(store_current_hypo_pass_kernel, 0, lstm_size, 1);
     assert(error == 0);
     _unused(error);
 }
 
-void CompressedLSTMCell::reset_current_hypo_pass() {
+void CompressedLSTMCellGPU::reset_current_hypo_pass() {
     int error = opencl_connector.queue.enqueueNDRangeKernel(reset_current_hypo_pass_kernel, 0, lstm_size, 1);
     assert(error == 0);
     _unused(error);
 }
 
-void CompressedLSTMCell::get_output(std::vector<float_type>& output) const {
+void CompressedLSTMCellGPU::get_output(std::vector<float_type>& output) const {
     assert(static_cast<float_type>(output.size()) == lstm_size);
     int error = opencl_connector.queue.enqueueReadBuffer(hidden_buffer, CL_TRUE, 0, sizeof(float_type) * lstm_size,
                                                          output.data());
+    std::cout << output[0] << std::endl;
     assert(error == 0);
     _unused(error);
 }
 
-void CompressedLSTMCell::process(size_t one_hot_index, size_t model_index) {
+void CompressedLSTMCellGPU::process(size_t one_hot_index, size_t model_index) {
+    std::cout << "AAAAAAAAAAA " << one_hot_index << std::endl;
     calculate_ijfo(one_hot_index, model_index);
     int error = opencl_connector.queue.enqueueNDRangeKernel(lstm_cell_kernel, 0, lstm_size, 1);
     assert(error == 0);
     _unused(error);
 }
 
-void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_index) {
+void CompressedLSTMCellGPU::calculate_ijfo(int_type one_hot_index, size_t model_index) {
     assert(model_index < left_matrix_buffers.size());
     cl::Buffer& left_matrix_buffer = left_matrix_buffers[model_index];
     cl::Buffer& intermediate_matrix_buffer = intermediate_matrix_buffers[model_index];
@@ -235,4 +239,4 @@ void CompressedLSTMCell::calculate_ijfo(int_type one_hot_index, size_t model_ind
     opencl_connector.add_to_vector(bias_buffer, ijfo_buffer, 4 * lstm_size);
 }
 
-} // namespace NOpenCLConnector
+} // namespace NNetworkHypoSearcher

@@ -49,7 +49,7 @@ void NetworkAutomataCPU::get_output(std::vector<float_type>& output) {
                                           [](float_type first, float_type second) { return std::max(first, second); });
     std::transform(output.begin(), output.end(), output.begin(),
                    [max_item](float_type item) { return exponent(item - max_item); });
-    float_type normalize_factor = std::accumulate(output.begin(), output.end(), 0,
+    float_type normalize_factor = std::accumulate(output.begin(), output.end(), 0.0,
                    [](float_type first, float_type second ) { return first + second; });
     std::transform(output.begin(), output.end(), output.begin(),
                    [normalize_factor](float_type item) { return item / normalize_factor; });

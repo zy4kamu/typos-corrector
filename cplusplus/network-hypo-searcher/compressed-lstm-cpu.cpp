@@ -96,12 +96,12 @@ void CompressedLSTMCellCPU::make_all_buffers_zero() {
 }
 
 void CompressedLSTMCellCPU::store_current_hypo_pass() {
-    stored_state_buffer.swap(state_buffer);
+    memcpy(stored_state_buffer.data(), state_buffer.data(), lstm_size * sizeof(float_type));
     memcpy(stored_hidden_buffer.data(), hidden_buffer, lstm_size * sizeof(float_type));
 }
 
 void CompressedLSTMCellCPU::reset_current_hypo_pass() {
-    stored_state_buffer.swap(state_buffer);
+    memcpy(state_buffer.data(), stored_state_buffer.data(), lstm_size * sizeof(float_type));
     memcpy(hidden_buffer, stored_hidden_buffer.data(), lstm_size * sizeof(float_type));
 }
 

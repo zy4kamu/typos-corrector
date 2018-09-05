@@ -42,7 +42,7 @@ int get_letter(const std::string& message, size_t position) {
 }
 
 float_type exponent(float_type value) {
-    value = value < -8 ? -8 : value > 8 ? 8 : value;
+    value = value > 8 ? 8 : value;
     return std::exp(value);
 }
 

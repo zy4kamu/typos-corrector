@@ -1,5 +1,6 @@
 #include "hypo-searcher.h"
 
+#include <chrono>
 #include <iostream>
 #include <string>
 
@@ -19,10 +20,13 @@ void test_hypo_searcher(int argc, char* argv[]) {
         std::cout << "Input something: ";
         std::getline(std::cin, input);
 
+        auto start = std::chrono::steady_clock::now();
         std::vector<std::string> hypos = searcher.search(input);
+        auto end = std::chrono::steady_clock::now();
         for (const std::string& hypo : hypos) {
             std::cout << hypo << std::endl;
         }
+        std::cout << "spent " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ...\n" << std::endl;
     }
 }
 

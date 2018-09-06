@@ -1,8 +1,8 @@
 #include "compressed-lstm-cpu.h"
 
 #include <cassert>
-#include <fstream>
 #include <cmath>
+#include <fstream>
 #include "../utils/utils.h"
 
 namespace NNetworkHypoSearcher {

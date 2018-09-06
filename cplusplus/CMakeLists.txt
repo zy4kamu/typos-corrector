@@ -16,7 +16,7 @@ endif ()
 
 if (${CMAKE_BUILD_TYPE} MATCHES RELEASE)
     MESSAGE(WARNING "Building RELEASE version: -Ofast is used")
-    SET(CMAKE_CXX_FLAGS "-Ofast ${COMMON_CXX_FLAGS}")
+    SET(CMAKE_CXX_FLAGS "-Ofast -ffast-math -ffinite-math-only -funroll-loops -funsafe-math-optimizations -fvectorize ${COMMON_CXX_FLAGS}")
 else ()
     MESSAGE(WARNING "Building DEBUG version: -O0 is used")
     SET(CMAKE_CXX_FLAGS "-O0 -g ${COMMON_CXX_FLAGS}")

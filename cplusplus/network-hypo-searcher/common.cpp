@@ -23,10 +23,12 @@ std::vector<float_type> read_file(const std::string& filename) {
 
 void vector_matrix_multiply(const float_type* vector, const float_type* matrix, size_t num_rows, size_t num_cols,
                             float_type* output) {
-    for (size_t j = 0; j < num_cols; ++j) {
-        output[j] = 0;
-        for (size_t i = 0; i < num_rows; ++i) {
-            output[j] += vector[i] * matrix[i * num_cols + j];
+    memset(output, 0, sizeof(float_type) * num_cols);
+    for (size_t i = 0; i < num_rows; ++i) {
+        float_type vector_value = vector[i];
+        const float_type* matrix_row = matrix + i * num_cols;
+        for (size_t j = 0; j < num_cols; ++j) {
+            output[j] += vector_value * matrix_row[j];
         }
     }
 }

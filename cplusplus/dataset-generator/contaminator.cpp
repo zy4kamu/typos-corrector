@@ -1,6 +1,8 @@
 #include "contaminator.h"
 #include "../utils/utils.h"
 
+#include <algorithm>
+#include <cassert>
 #include <unordered_map>
 
 namespace {
@@ -46,72 +48,112 @@ Contaminator::Contaminator(const std::string& ngrams_file, double mistake_probab
     : ngrams(ngrams_file), mistake_probability(mistake_probability), generator(1) {
 }
 
-std::string Contaminator::swap_random_chars(const std::string& token) const {
-    if (token.size() < 2) {
-        return token;
+std::string Contaminator::swap_random_chars(const std::string& message) const {
+    if (message.size() < 2) {
+        return message;
     }
-    std::uniform_int_distribution<size_t> distribution(0, token.size() - 2);
+    std::uniform_int_distribution<size_t> distribution(0, message.size() - 2);
     size_t index = distribution(generator);
-    return token.substr(0, index) + token[index + 1] + token[index] + token.substr(index + 2);
+    return message.substr(0, index) + message[index + 1] + message[index] + message.substr(index + 2);
 }
 
-std::string Contaminator::replace_random_char(const std::string& token) const {
-    if (token.empty()) {
-        return token;
+std::string Contaminator::replace_random_char(const std::string& message) const {
+    if (static_cast<size_t>(std::count(message.begin(), message.end(), '|')) == message.length()) {
+        return message;
     }
-    std::uniform_int_distribution<size_t> distribution(0, token.size() - 1);
-    size_t index = distribution(generator);
-    return token.substr(0, index) + get_random_char(token, index) + token.substr(index + 1);
+    std::uniform_int_distribution<size_t> distribution(0, message.size() - 1);
+    while (true) {
+        size_t index = distribution(generator);
+        if (message[index] == '|') {
+            continue;
+        }
+        return message.substr(0, index) + get_random_char(message, index) + message.substr(index + 1);
+    }
 }
 
-std::string Contaminator::add_random_char(const std::string& token) const {
-    if (token.empty()) {
+std::string Contaminator::add_random_char(const std::string& message) const {
+    if (message.empty()) {
         return std::string(1, get_random_char());
     }
-    std::uniform_int_distribution<size_t> distribution(0, token.size());
+    std::uniform_int_distribution<size_t> distribution(0, message.size());
     size_t index = distribution(generator);
-    return token.substr(0, index) + get_random_char(token, index) + token.substr(index);
+    return message.substr(0, index) + get_random_char(message, index) + message.substr(index);
 }
 
-std::string Contaminator::remove_random_char(const std::string& token) const {
-    std::uniform_int_distribution<size_t> distribution(0, token.size() - 1);
-    size_t index = distribution(generator);
-    return token.substr(0, index) + token.substr(index + 1);
+std::string Contaminator::remove_random_char(const std::string& message) const {
+    if (static_cast<size_t>(std::count(message.begin(), message.end(), '|')) == message.length()) {
+        return message;
+    }
+    std::uniform_int_distribution<size_t> distribution(0, message.size() - 1);
+    while (true) {
+        size_t index = distribution(generator);
+        if (message[index] == '|') {
+            continue;
+        }
+        return message.substr(0, index) + message.substr(index + 1);
+    }
 }
 
-std::string Contaminator::contaminate(const std::string& token) const {
+std::string Contaminator::contaminate(const std::vector<std::string>& example, size_t message_size) const {
+    std::string message;
+    std::vector<std::string> digit_parts;
+    for (const std::string& component : example) {
+        if (!message.empty()) {
+            message += " ";
+        }
+        if (contains_digit(component)) {
+            digit_parts.push_back(component);
+            message += "|";
+        } else {
+            message += component;
+        }
+    }
+    std::string contaminated_string = contaminate(message);
+    for (const std::string& digit_part : digit_parts) {
+        size_t placeholder_position = contaminated_string.find('|');
+        assert(placeholder_position != std::string::npos);
+        contaminated_string = contaminated_string.substr(0, placeholder_position) + digit_part +
+                contaminated_string.substr(placeholder_position + 1);
+    }
+    if (contaminated_string.length() > message_size) {
+        contaminated_string = contaminated_string.substr(0, message_size);
+    }
+    return contaminated_string;
+}
+
+std::string Contaminator::contaminate(const std::string& message) const {
     size_t mistake_counter = 0;
     std::bernoulli_distribution contaminate_distribution(mistake_probability);
     std::uniform_int_distribution<int> distribution(0, 3);
-    std::string contaminated_token = token;
-    for (size_t i = 0; i < token.size(); ++i) {
+    std::string contaminated_string = message;
+    for (size_t i = 0; i < message.size(); ++i) {
         if (contaminate_distribution(generator)) {
-            if (++mistake_counter == 3) { // no more than 3 mistakes per token
+            if (++mistake_counter == 3) { // no more than 3 mistakes per message
                 break;
             }
             int type = distribution(generator);
             switch (type) {
                 case 0:
-                    contaminated_token = swap_random_chars(contaminated_token);
+                    contaminated_string = swap_random_chars(contaminated_string);
                     break;
                 case 1:
-                    contaminated_token = replace_random_char(contaminated_token);
+                    contaminated_string = replace_random_char(contaminated_string);
                     break;
                 case 2:
-                    contaminated_token = add_random_char(contaminated_token);
+                    contaminated_string = add_random_char(contaminated_string);
                     break;
                 case 3:
-                    contaminated_token = remove_random_char(contaminated_token);
+                    contaminated_string = remove_random_char(contaminated_string);
                     break;
             }
         }
     }
-    return contaminated_token;
+    return contaminated_string;
 }
 
 // helpers
 
-char Contaminator::get_random_char(const std::string& token, size_t index) const {
+char Contaminator::get_random_char(const std::string& message, size_t index) const {
     std::discrete_distribution<int> type_distribution({ 0.45, 0.45, 0.1});
     int type = type_distribution(generator);
     switch(type) {
@@ -121,9 +163,9 @@ char Contaminator::get_random_char(const std::string& token, size_t index) const
         std::string prefix;
         if (index < ngrams.size()) {
             prefix = std::string(ngrams.size() - index, ' ');
-            prefix += token.substr(0, index);
+            prefix += message.substr(0, index);
         } else {
-            prefix = token.substr(index - ngrams.size(), ngrams.size());
+            prefix = message.substr(index - ngrams.size(), ngrams.size());
         }
         const std::vector<double>& probs = ngrams.get_probabities(prefix);
         if (!probs.empty()) {
@@ -134,7 +176,7 @@ char Contaminator::get_random_char(const std::string& token, size_t index) const
     }
     case 1:
         // qwerty
-        return get_random_qwerty_neighbour(index == token.length() ? token.back() : token[index], true);
+        return get_random_qwerty_neighbour(index == message.length() ? message.back() : message[index], true);
         // random
     case 2:
         return get_random_char();
@@ -143,7 +185,11 @@ char Contaminator::get_random_char(const std::string& token, size_t index) const
 }
 
 char Contaminator::get_random_qwerty_neighbour(char letter, bool allow_repeat) const {
-    const std::vector<char>& neighbours = QWERTY_MAP.at(letter);
+    auto found = QWERTY_MAP.find(letter);
+    if (found == QWERTY_MAP.end()) {
+        return get_random_char();
+    }
+    const std::vector<char>& neighbours = found->second;
     if (allow_repeat) {
         std::uniform_int_distribution<size_t> distribution(0, neighbours.size());
         size_t index = distribution(generator);

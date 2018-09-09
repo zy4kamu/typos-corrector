@@ -13,6 +13,7 @@ int32_t to_int(char ch);
 char to_char(int32_t number);
 std::string clean_token(const std::string& token);
 std::vector<std::string> split(const std::string &s, char delim);
+bool contains_digit(const std::string& token);
 
 size_t get_file_size(const char *filename);
 size_t get_file_size(const std::string& filename);

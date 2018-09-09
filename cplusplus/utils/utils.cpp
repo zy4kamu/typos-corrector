@@ -1,5 +1,6 @@
 #include "utils.h"
 
+#include <algorithm>
 #include <cassert>
 #include <dirent.h>
 #include <iostream>
@@ -13,30 +14,50 @@
 
 const int32_t A_INT = static_cast<int32_t>('a');
 const int32_t Z_INT = static_cast<int32_t>('z');
-const int32_t SPACE_INT = Z_INT - A_INT + 1;
+const int32_t INT_0 = static_cast<int32_t>('0');
+const int32_t INT_9 = static_cast<int32_t>('9');
+const int32_t NUM_ALPHAS = Z_INT - A_INT + 1;
+const int32_t NUM_DIGITS = 10;
+const int32_t SPACE_INT = NUM_ALPHAS + NUM_DIGITS;
 const int32_t SEPARATOR_INT = SPACE_INT + 1;
 const size_t EFFECTIVE_NUM_LETTERS = SEPARATOR_INT + 1;
-const size_t NUM_LETTERS = 32;
+const size_t NUM_LETTERS = 64;
 
 bool acceptable(char ch) {
-    return ch == ' ' || ch == '|' || ('a' <= ch && ch <= 'z');
+    return ch == ' ' || ch == '|' || ('a' <= ch && ch <= 'z') || ('0' <= ch && ch <= '9');
 }
 
 int32_t to_int(char ch) {
-    assert(acceptable(ch));
+    if (!acceptable(ch)) {
+        std::cout << "Invalid char " << ch << std::endl;
+        throw std::runtime_error("invalid char");
+    }
     switch (ch) {
     case ' ': return SPACE_INT;
     case '|': return SEPARATOR_INT;
-    default: return static_cast<int32_t>(ch) - A_INT;
+    default:
+        if (ch <= '9') {
+            return NUM_ALPHAS + static_cast<int32_t>(ch) - INT_0;
+        }
+        return static_cast<int32_t>(ch) - A_INT;
     }
 }
 
 char to_char(int32_t number) {
-    assert(0 <= number && number < static_cast<int32_t>(EFFECTIVE_NUM_LETTERS));
+    bool ok = 0 <= number && number < static_cast<int32_t>(EFFECTIVE_NUM_LETTERS);
+    if (!ok) {
+        std::cout << "Invalid int " <<  number << std::endl;
+        throw std::runtime_error("invalid number");
+    }
     switch (number) {
         case SPACE_INT: return ' ';
         case SEPARATOR_INT: return '|';
-        default: return static_cast<char>(A_INT + number);
+        default:
+            if (number < NUM_ALPHAS) {
+                return static_cast<char>(A_INT + number);
+            } else {
+                return static_cast<char>(INT_0 + number - NUM_ALPHAS);
+            }
     }
 }
 
@@ -144,4 +165,8 @@ std::vector<std::string> read_directory(const std::string& name) {
     }
     closedir(dirp);
     return content;
+}
+
+bool contains_digit(const std::string& token) {
+    return std::any_of(token.begin(), token.end(), [](char letter) { return std::isdigit(letter); });
 }

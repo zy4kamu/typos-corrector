@@ -3,7 +3,6 @@ import tensorflow as tf
 import numpy as np
 import utils
 import cpp_bindings
-import protobuf_talker
 
 from tensorflow.python.framework import constant_op
 from tensorflow.python.framework import dtypes
@@ -18,6 +17,7 @@ model_file = 'model/model-1/model'
 test_num_iterations = 2500
 test_batch_size = 10000
 lstm_size = 512
+compressor_size = 128
 
 #TODO: play with forget bias
 #TODO: play with activation
@@ -32,8 +32,8 @@ class CompressedLSTM(tf.contrib.rnn.BasicLSTMCell):
                              % inputs_shape)
         input_depth = inputs_shape[1].value
         h_depth = self._num_units
-        self._left_matrix = self.add_variable("left_matrix", shape=[input_depth + h_depth, 128])
-        self._right_matrix = self.add_variable("right_matrix", shape=[128, 4 * self._num_units])
+        self._left_matrix = self.add_variable("left_matrix", shape=[input_depth + h_depth, compressor_size])
+        self._right_matrix = self.add_variable("right_matrix", shape=[compressor_size, 4 * self._num_units])
         self._kernel = math_ops.mat_mul(self._left_matrix, self._right_matrix)
         self._bias = self.add_variable("bias",shape=[4 * self._num_units],
                                        initializer=init_ops.zeros_initializer(dtype=self.dtype))
@@ -300,7 +300,7 @@ class HypoSearcher(NetworkAutomata):
         NetworkAutomata.__init__(self)
         self.verbose = verbose
 
-    def search(self, token, num_attempts=100, protobuf_talker=None, address=None):
+    def search(self, token, num_attempts=100, address=None):
         if len(token) > message_size:
             token = token[0:message_size]
         if self.verbose:
@@ -310,13 +310,6 @@ class HypoSearcher(NetworkAutomata):
         checked_prefixes = []
 
         while len(prefixes) > 0 and attempt < num_attempts:
-            if not protobuf_talker is None:
-                protobuf_talker.send(address, '?')
-                _, status = protobuf_talker.receive()
-                if status != 'y':
-                    print 'stopped ...'
-                    return '--stopped--'
-
             attempt += 1
             prefix = prefixes[0][1]
 
@@ -439,7 +432,7 @@ def basic_productivity_check():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
-                        choices=['train', 'continue', 'play', 'test', 'listen', 'check'])
+                        choices=['train', 'continue', 'play', 'test', 'check'])
     parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/dataset')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
@@ -495,15 +488,6 @@ if __name__ == '__main__':
                 probs = automata.apply(letter)
         with open('model/first-mistake-statistics', 'w') as writer:
             writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
-    elif args.command == 'listen':
-        hypo_searcher = HypoSearcher()
-        communicator = protobuf_talker.ProtobufTalker()
-        print 'listening ...'
-        while True:
-            address, received = communicator.receive()
-            to_send = hypo_searcher.search(received, protobuf_talker=communicator, address=address)
-            if to_send != '--stopped--':
-                communicator.send(address, to_send)
     elif args.command == 'check':
         basic_productivity_check()
     else:

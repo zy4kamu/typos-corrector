@@ -30,6 +30,19 @@ void test_hypo_searcher(int argc, char* argv[]) {
     }
 }
 
+void test_dataset_generator() {
+    std::mt19937 generator(1);
+    DataSet dataset("/home/stepan/datasets/europe-hierarchy");
+    for (size_t i = 0; i < 100; ++i) {
+        std::vector<const DataSet::Entity*> entities = dataset.get_random_item(generator);
+        for (const DataSet::Entity* entity : entities) {
+            std::cout << entity->type << " " << entity->name << std::endl;
+        }
+        std::cout << std::endl << std::endl;
+    }
+}
+
 int main(int argc, char* argv[]) {
-    test_hypo_searcher(argc, argv);
+    test_dataset_generator();
+    //test_hypo_searcher(argc, argv);
 }

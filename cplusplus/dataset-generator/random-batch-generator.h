@@ -22,10 +22,11 @@ private:
     std::mt19937        generator;
 
     std::discrete_distribution<size_t> country_distribution  { 0.05, 0.95 };
-    std::discrete_distribution<size_t> city_distribution     { 0.2, 0.8 };
-    std::discrete_distribution<size_t> district_distribution { 0.1, 0.9 };
+    std::discrete_distribution<size_t> city_distribution     { 0.25, 0.75 };
+    std::discrete_distribution<size_t> district_distribution { 0.15, 0.85 };
     std::discrete_distribution<size_t> index_distribution    { 0.05, 0.95 };
     std::discrete_distribution<size_t> street_distribution   { 0.9, 0.1 };
     std::discrete_distribution<size_t> house_distribution    { 0.3, 0.7 };
+    std::discrete_distribution<size_t> unknown_distribution  { 0.1, 0.9 };
 };
 

@@ -25,6 +25,11 @@ std::vector<std::string> RandomBatchGenerator::generate_one_example() {
                     components.push_back(entity->name);
                 }
                 break;
+            case 11:  // city
+                if (city_distribution(generator) == 0) {
+                    components.push_back(entity->name);
+                }
+                break;
             case 23:  // index
             case 30:  // extended index
                 if (!added_index) {
@@ -44,8 +49,14 @@ std::vector<std::string> RandomBatchGenerator::generate_one_example() {
                     components.push_back(entity->name);
                 }
                 break;
+            default: // 12, 13, 15
+                if (unknown_distribution(generator) == 0) {
+                    components.push_back(entity->name);
+                }
+                break;
             }
         }
+        std::shuffle(components.begin(), components.end(), generator);
         if (!components.empty()) {
             return components;
         }
@@ -63,6 +74,9 @@ std::string RandomBatchGenerator::get_clean_string(const std::vector<std::string
         } else {
             message += compressor.compress(component);
         }
+    }
+    if (message.length() > compressor.get_message_size()) {
+        message = message.substr(0, compressor.get_message_size());
     }
     return message;
 }

@@ -9,7 +9,7 @@ if [ ! -d $build_folder ]; then
 fi
 
 pushd $build_folder
-cmake $src_folder -DCMAKE_BUILD_TYPE=DEBUG
+cmake $src_folder -DCMAKE_BUILD_TYPE=RELEASE
 make
 popd
 

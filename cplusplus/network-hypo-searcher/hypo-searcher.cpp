@@ -210,7 +210,10 @@ HypoSearcher::find_max_prefix_several_tokens(const std::string& string, size_t& 
     std::vector<std::vector<std::string>> resulted_hypos;
     std::string current_token;
     while (getline(reader, current_token, '|')) {
-        if (reader.peek() == EOF) {
+        if (contains_digit(current_token)) {
+            resulted_hypos.push_back({ current_token });
+            max_prefix_length += max_prefix_length > 0 ? current_token.length() + 1 : current_token.length();
+        } else if (reader.peek() == EOF) {
             size_t one_token_max_prefix_length;
             resulted_hypos.push_back(find_max_prefix_one_token(current_token, one_token_max_prefix_length));
             take_smallest_strings_only(resulted_hypos.back());

@@ -43,6 +43,6 @@ void test_dataset_generator() {
 }
 
 int main(int argc, char* argv[]) {
-    test_dataset_generator();
-    //test_hypo_searcher(argc, argv);
+    // test_dataset_generator();
+    test_hypo_searcher(argc, argv);
 }

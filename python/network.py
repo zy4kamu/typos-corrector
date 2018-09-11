@@ -266,7 +266,7 @@ class NetworkAutomata(Network):
     def get_alternatives(self):
         alternatives = []
         for position in range(message_size):
-            for letter in range(utils.NUM_SYMBOLS):
+            for letter in range(utils.EFFECTIVE_NUM_SYMBOLS):
                 hypo = self._input_history[0:position] + utils.int_to_char(letter)
                 if not self._input_history.startswith(hypo):
                     alternatives.append((self._break_logits[position][letter], hypo))

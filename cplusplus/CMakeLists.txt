@@ -3,6 +3,11 @@ project(typos-corrector)
 
 option(BUILD_PYTHON_BINDINGS "Build library used by python wrapper" ON)
 option(BUILD_HYPO_SEARCHER   "Build complete C++ application"       ON)
+option(USE_OPENCL            "Uses OpenCL for maths computations"   ON)
+
+if (USE_OPENCL)
+    add_definitions(-DUSE_OPENCL)
+endif()
 
 ################### SET COMPILER AND LINKER FLAGS ###################
 if (${PLATFORM} MATCHES ANDROID)
@@ -34,5 +39,7 @@ endif (BUILD_PYTHON_BINDINGS)
 
 if (BUILD_HYPO_SEARCHER)
     add_subdirectory(network-hypo-searcher)
-    add_subdirectory(opencl-connector)
+    if (USE_OPENCL)
+        add_subdirectory(opencl-connector)
+    endif()
 endif()

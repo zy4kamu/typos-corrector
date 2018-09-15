@@ -1,22 +1,32 @@
 cmake_minimum_required(VERSION 2.8)
 project(network-hypo-searcher)
 
-# NOTE: Ubuntu 16.04 by default contains libraries for OpenCL 1.2.
-# Had to add this workaround to eliminate corresponding problems
-add_definitions(-DCL_HPP_MINIMUM_OPENCL_VERSION=120)
-add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
 add_definitions(-DROOT_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
 
-if (${PLATFORM} MATCHES ANDROID)
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector")
-    link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector/lib")
-endif ()
+if (USE_OPENCL)
+    # NOTE: Ubuntu 16.04 by default contains libraries for OpenCL 1.2.
+    # Had to add this workaround to eliminate corresponding problems
+    add_definitions(-DCL_HPP_MINIMUM_OPENCL_VERSION=120)
+    add_definitions(-DCL_HPP_TARGET_OPENCL_VERSION=120)
 
-add_executable(network-hypo-searcher common.cpp
-                                     compressed-lstm-cpu.cpp
-                                     compressed-lstm-gpu.cpp
-                                     hypo-searcher.cpp
-                                     main.cpp
-                                     network-automata-cpu.cpp
-                                     network-automata-gpu.cpp)
-target_link_libraries(network-hypo-searcher dataset opencl-connector utils)
+    if (${PLATFORM} MATCHES ANDROID)
+        include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector")
+        link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector/lib")
+    endif ()
+
+    add_executable(network-hypo-searcher common.cpp
+                                         compressed-lstm-gpu.cpp
+                                         hypo-searcher.cpp
+                                         main.cpp
+                                         network-automata-gpu.cpp)
+
+    target_link_libraries(network-hypo-searcher dataset opencl-connector utils)
+else()
+    add_executable(network-hypo-searcher common.cpp
+                                             compressed-lstm-cpu.cpp
+                                             hypo-searcher.cpp
+                                             main.cpp
+                                             network-automata-cpu.cpp)
+
+    target_link_libraries(network-hypo-searcher dataset utils)
+endif()

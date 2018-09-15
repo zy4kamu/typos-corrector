@@ -8,8 +8,14 @@
 
 #include "common.h"
 #include "../dataset/dataset.h"
-#include "network-automata-gpu.h"
-#include "network-automata-cpu.h"
+
+#ifdef USE_OPENCL
+    #include "network-automata-gpu.h"
+    using NetworkAutomata = NNetworkHypoSearcher::NetworkAutomataGPU;
+#else
+    #include "network-automata-cpu.h"
+    using NetworkAutomata = NNetworkHypoSearcher::NetworkAutomataCPU;
+#endif
 
 namespace NNetworkHypoSearcher {
 
@@ -44,7 +50,7 @@ private:
                                                                          size_t& max_prefix_length) const;
     std::vector<std::string> find_max_prefix_one_token(const std::string& token, size_t& max_prefix_length) const;
 
-    NetworkAutomataCPU      automata;
+    NetworkAutomata         automata;
     std::vector<float_type> first_mistake_statistics;
     DataSet                 dataset;
 

@@ -1,11 +1,22 @@
 #pragma once
 
-#include "../opencl-connector/common.h"
+#include <cstring>
+#include <string>
+#include <vector>
+
+#ifdef USE_OPENCL
+    #include "../opencl-connector/common.h"
+#endif
 
 namespace NNetworkHypoSearcher {
 
+#ifdef USE_OPENCL
 using float_type = NOpenCLConnector::float_type;
 using int_type = cl_int;
+#else
+    using float_type = float;
+    using int_type = int;
+#endif
 extern const size_t MESSAGE_SIZE;
 
 std::vector<float_type> read_file(const std::string& filename);

@@ -23,10 +23,11 @@ if (USE_OPENCL)
     target_link_libraries(network-hypo-searcher dataset opencl-connector utils)
 else()
     add_executable(network-hypo-searcher common.cpp
-                                             compressed-lstm-cpu.cpp
-                                             hypo-searcher.cpp
-                                             main.cpp
-                                             network-automata-cpu.cpp)
+                                         compressed-lstm-cpu.cpp
+                                         i-database-requester.cpp
+                                         hypo-searcher.cpp
+                                         main.cpp
+                                         network-automata-cpu.cpp)
 
     target_link_libraries(network-hypo-searcher dataset utils)
 endif()

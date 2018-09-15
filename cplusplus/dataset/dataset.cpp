@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "../utils/utils.h"
 
@@ -50,6 +50,11 @@ DataSet::DataSet(const std::string& input_folder): house_numbers_distribution(10
 
     // create transition distributions for each node
     root.finalize();
+
+    // save all tokens in a set for prefix search
+    for (const auto& item : index_to_name) {
+        tokens.insert(item.second.name);
+    }
 }
 
 DataSet::Node* DataSet::Node::add(size_t index) {
@@ -95,3 +100,14 @@ std::vector<const DataSet::Entity*> DataSet::get_random_item(std::mt19937& gener
 const std::unordered_map<size_t, DataSet::Entity>& DataSet::content() const {
     return index_to_name;
 }
+
+std::vector<std::string> DataSet::find_by_prefix(const std::string& prefix, size_t max_number) const {
+    std::vector<std::string> results;
+    for (auto found = tokens.lower_bound(prefix);
+         found != tokens.end() && boost::starts_with(*found, prefix) && results.size() <= max_number;
+         ++found) {
+        results.push_back(*found);
+    }
+    return results;
+}
+

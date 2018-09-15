@@ -88,7 +88,7 @@ bool HypoNodePointerComparator::operator()(const HypoNode* first, const HypoNode
 HypoSearcher::HypoSearcher(const std::string& dataset_folder,
                            const std::string& lstm_folder,
                            const std::string& first_mistake_file)
-    : automata(lstm_folder), dataset(dataset_folder), compressor(dataset, MESSAGE_SIZE) {
+    : automata(lstm_folder), dataset(dataset_folder) {
     read_first_mistake_statistics(first_mistake_file);
 }
 
@@ -234,7 +234,7 @@ HypoSearcher::find_max_prefix_several_tokens(const std::string& string, size_t& 
 }
 
 std::vector<std::string> HypoSearcher::find_max_prefix_one_token(const std::string& token, size_t& max_prefix_length) const {
-    std::vector<std::string> hypos = compressor.find_by_prefix(token, MAX_HYPOS);
+    std::vector<std::string> hypos = dataset.find_by_prefix(token, MAX_HYPOS);
     if (!hypos.empty()) {
         max_prefix_length = token.length();
         return hypos;
@@ -243,7 +243,7 @@ std::vector<std::string> HypoSearcher::find_max_prefix_one_token(const std::stri
     size_t end = token.length();
     while (start + 1 < end) {
         size_t middle = (start + end) / 2;
-        hypos = compressor.find_by_prefix(token.substr(0, middle), MAX_HYPOS);
+        hypos = dataset.find_by_prefix(token.substr(0, middle), MAX_HYPOS);
         if (hypos.empty()) {
             end = middle;
         } else {

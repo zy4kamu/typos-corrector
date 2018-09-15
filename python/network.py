@@ -295,6 +295,7 @@ class DefaultMistakeCounter(object):
         return self._logits[position]
 
 # TODO: Algorithm is not perfect, it can check the same hypo muttiple times
+# TODO: THIS IS DEAD CODE AND IT WILL NOT WORK
 class HypoSearcher(NetworkAutomata):
     def __init__(self, verbose=True):
         NetworkAutomata.__init__(self)

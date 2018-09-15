@@ -13,14 +13,7 @@ def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/data
     _set_dataset_folder(dataset_folder)
     _create_dataset()
     _create_contaminator(ngrams_file, mistake_probability)
-    _create_compressor(message_size)
     _create_random_batch_generator()
-
-
-def decompress(token):
-    decompressed = ' ' * 1024
-    _library.decompress(ctypes.c_char_p(token.strip()), ctypes.c_char_p(decompressed))
-    return filter(lambda x: len(x) > 0, decompressed.strip().split('|'))
 
 
 def find_by_prefix(token, max_number):
@@ -65,12 +58,8 @@ def _create_contaminator(ngrams_file, mistake_probability):
     _library.create_contaminator(ctypes.c_char_p(ngrams_file), ctypes.c_double(mistake_probability))
 
 
-def _create_compressor(message_size):
-    _library.create_compressor(ctypes.c_size_t(message_size))
-
-
 def _create_random_batch_generator():
-    _library.create_random_batch_generator()
+    _library.create_random_batch_generator(ctypes.c_size_t(MESSAGE_SIZE))
 
 
 # Examples
@@ -82,8 +71,4 @@ if __name__ == '__main__':
     assert levenstein('hello', 'dello') == 1
     assert levenstein('amsterdam', 'masterdam') == 2
     assert levenstein('amsterdamm', 'masterdamk') == 3
-
-    generate_cpp_bindings('model/update-regions', 0.2)
-    print find_by_prefix('krelis', 20)
-
 

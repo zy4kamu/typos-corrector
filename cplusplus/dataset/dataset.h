@@ -2,6 +2,7 @@
 
 #include <map>
 #include <random>
+#include <set>
 #include <string>
 #include <utility>
 #include <unordered_map>
@@ -28,8 +29,10 @@ public:
     DataSet(const std::string& input_folder);
     std::vector<const Entity*> get_random_item(std::mt19937& generator) const;
     const std::unordered_map<size_t, Entity>& content() const;
+    std::vector<std::string> find_by_prefix(const std::string& prefix, size_t max_number) const;
 private:
     std::unordered_map<size_t, Entity> index_to_name;
     mutable std::uniform_int_distribution<size_t> house_numbers_distribution;
     Node root;
+    std::set<std::string> tokens;
 };

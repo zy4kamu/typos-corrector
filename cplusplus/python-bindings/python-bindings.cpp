@@ -6,7 +6,6 @@
 
 #include <boost/make_unique.hpp>
 
-#include "../dataset/compressor.h"
 #include "../dataset/dataset.h"
 #include "../dataset-generator/contaminator.h"
 #include "../dataset-generator/random-batch-generator.h"
@@ -15,7 +14,6 @@
 extern "C" {
 
 std::string                           DATASET_FOLDER;
-std::unique_ptr<Compressor>           COMPRESSOR;
 std::unique_ptr<Contaminator>         CONTAMINATOR;
 std::unique_ptr<DataSet>              DATASET;
 std::unique_ptr<RandomBatchGenerator> BATCH_GENERATOR;
@@ -36,28 +34,9 @@ void create_contaminator(const char* ngrams_file, double mistake_probability) {
     CONTAMINATOR = boost::make_unique<Contaminator>(ngrams_file, mistake_probability);
 }
 
-void create_compressor(size_t message_size) {
-    assert(DATASET);
-    assert(!COMPRESSOR);
-    COMPRESSOR = boost::make_unique<Compressor>(*DATASET, message_size);
-}
-
-void decompress(const char* token, char* output) {
-    assert(COMPRESSOR);
-    const std::vector<std::string>& decompressed = COMPRESSOR->decompress(token);
-    std::stringstream stream;
-    for (const std::string& decompresed_token : decompressed) {
-        stream << decompresed_token << "|";
-    }
-    const std::string concatenated = stream.str();
-    if (!concatenated.empty()) {
-        std::memcpy(output, concatenated.c_str(), concatenated.length() - 1);
-    }
-}
-
 void find_by_prefix(const char* prefix, size_t max_size, char* output) {
-    assert(COMPRESSOR);
-    std::vector<std::string> decompressed = COMPRESSOR->find_by_prefix(prefix, max_size);
+    assert(DATASET);
+    std::vector<std::string> decompressed = DATASET->find_by_prefix(prefix, max_size);
     std::stringstream stream;
     for (const std::string& decompresed_token : decompressed) {
         stream << decompresed_token << "|";
@@ -68,10 +47,10 @@ void find_by_prefix(const char* prefix, size_t max_size, char* output) {
     }
 }
 
-void create_random_batch_generator() {
+void create_random_batch_generator(size_t message_size) {
     assert(DATASET);
     assert(!BATCH_GENERATOR);
-    BATCH_GENERATOR = boost::make_unique<RandomBatchGenerator>(*DATASET, *CONTAMINATOR, *COMPRESSOR);
+    BATCH_GENERATOR = boost::make_unique<RandomBatchGenerator>(*DATASET, *CONTAMINATOR, message_size);
 }
 
 void generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size) {

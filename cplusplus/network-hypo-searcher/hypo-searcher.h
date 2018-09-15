@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "common.h"
+#include "../dataset/dataset.h"
 #include "network-automata-gpu.h"
 #include "network-automata-cpu.h"
-#include "../dataset/compressor.h"
 
 namespace NNetworkHypoSearcher {
 
@@ -47,7 +47,6 @@ private:
     NetworkAutomataCPU      automata;
     std::vector<float_type> first_mistake_statistics;
     DataSet                 dataset;
-    Compressor              compressor;
 
     AutomataNodesSet nodes_to_process;
     HypoNode root;

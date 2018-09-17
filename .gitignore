@@ -7,4 +7,3 @@ build/
 corpus
 cplusplus-build
 python/message_pb2.py
-python/model/parameters

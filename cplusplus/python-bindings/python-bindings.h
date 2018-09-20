@@ -6,7 +6,8 @@
 extern "C" {
 
 void set_dataset_folder(const char* input_folder);
-void create_dataset();
+void reset();
+void create_dataset(size_t split_index);
 void create_contaminator(const char* ngrams_file, double mistake_probability);
 void find_by_prefix(const char* prefix, size_t max_size, char* output);
 void create_random_batch_generator(size_t message_size);

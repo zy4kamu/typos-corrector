@@ -4,12 +4,8 @@ import numpy as np
 import utils
 import cpp_bindings
 
-from tensorflow.python.framework import constant_op
-from tensorflow.python.framework import dtypes
-from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import init_ops
 from tensorflow.python.ops import math_ops
-from tensorflow.python.ops import nn_ops
 
 message_size = 25
 batch_size = None
@@ -17,7 +13,8 @@ model_file = 'model/model-1/model'
 test_num_iterations = 2500
 test_batch_size = 10000
 lstm_size = 512
-compressor_size = 128
+compressor_size = 256
+ARGS = None
 
 #TODO: play with forget bias
 #TODO: play with activation
@@ -119,6 +116,7 @@ class Network(object):
                                                                       float(dummy_num_correct) / float(test_num_letters))
                 print 'levenstein: {}'.format(float(sum_levenstein) / float(test_batch_size))
                 print ''
+                generate_cpp_bindings()
 
             # update gradient
             clean, contaminated = cpp_bindings.generate_random_batch(batch_size)
@@ -429,6 +427,11 @@ def basic_productivity_check():
     check('kanstraasse', 'kaanstrasse')
     check('navanrod', 'navan road')
 
+def generate_cpp_bindings():
+    cpp_bindings.generate_cpp_bindings(ngrams_file=ARGS.ngrams_file,
+                                       dataset_folder=ARGS.input_folder,
+                                       mistake_probability=ARGS.mistake_probability,
+                                       message_size=ARGS.message_size)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
@@ -440,30 +443,27 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)
     parser.add_argument('-n', '--ngrams-file',         type=str,   help='file with ngrams model',        default='model/ngrams')
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
-    args = parser.parse_args()
-    message_size = args.message_size
-    batch_size = args.batch_size
-    model_file = args.model_file
+    ARGS = parser.parse_args()
+    message_size = ARGS.message_size
+    batch_size = ARGS.batch_size
+    model_file = ARGS.model_file
     model_file = model_file if not model_file is None else 'model/model-1/model'
 
-    cpp_bindings.generate_cpp_bindings(ngrams_file=args.ngrams_file,
-                                       dataset_folder=args.input_folder,
-                                       mistake_probability=args.mistake_probability,
-                                       message_size=args.message_size)
+    generate_cpp_bindings()
 
-    if args.command == 'train':
+    if ARGS.command == 'train':
         network = Network()
         network.train(restore_parameters_from_file=False)
-    elif args.command == 'continue':
+    elif ARGS.command == 'continue':
         network = Network()
         network.train(restore_parameters_from_file=True)
-    elif args.command == 'play':
+    elif ARGS.command == 'play':
         hypo_searcher = HypoSearcher()
         while True:
             token = raw_input("Input something: ")
             hypo_searcher.search(token)
             print ''
-    elif args.command == 'test':
+    elif ARGS.command == 'test':
         first_mistake_statistics = np.zeros(message_size + 1)
         automata = NetworkAutomata()
         clean_test_batch, contaminated_test_batch = cpp_bindings.generate_random_batch(test_batch_size)
@@ -489,8 +489,8 @@ if __name__ == '__main__':
                 probs = automata.apply(letter)
         with open('model/first-mistake-statistics', 'w') as writer:
             writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
-    elif args.command == 'check':
+    elif ARGS.command == 'check':
         basic_productivity_check()
     else:
-        raise ValueError(args.command)
+        raise ValueError(ARGS.command)
 

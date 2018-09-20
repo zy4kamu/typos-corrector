@@ -26,7 +26,7 @@ public:
         void finalize();
     };
 
-    DataSet(const std::string& input_folder);
+    DataSet(const std::string& input_folder, size_t split_index = std::string::npos);
     std::vector<const Entity*> get_random_item(std::mt19937& generator) const;
     const std::unordered_map<size_t, Entity>& content() const;
     std::vector<std::string> find_by_prefix(const std::string& prefix, size_t max_number) const;

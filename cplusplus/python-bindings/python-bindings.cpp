@@ -23,10 +23,16 @@ void set_dataset_folder(const char* input_folder) {
     DATASET_FOLDER = input_folder;
 }
 
-void create_dataset() {
+void reset() {
+    BATCH_GENERATOR.reset();
+    CONTAMINATOR.reset();
+    DATASET.reset();
+}
+
+void create_dataset(size_t split_index) {
     assert(!DATASET_FOLDER.empty());
     assert(!DATASET);
-    DATASET = boost::make_unique<DataSet>(DATASET_FOLDER);
+    DATASET = boost::make_unique<DataSet>(DATASET_FOLDER, split_index);
 }
 
 void create_contaminator(const char* ngrams_file, double mistake_probability) {

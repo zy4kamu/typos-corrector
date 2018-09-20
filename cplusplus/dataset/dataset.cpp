@@ -20,7 +20,7 @@ int entity_type_to_int(const std::string& type) {
 
 } // anonymous namespace
 
-DataSet::DataSet(const std::string& input_folder): house_numbers_distribution(1000000) {
+DataSet::DataSet(const std::string& input_folder, size_t split_index): house_numbers_distribution(1000000) {
     // read names file
     std::ifstream names_reader(input_folder + "/names");
     std::string line;
@@ -30,8 +30,10 @@ DataSet::DataSet(const std::string& input_folder): house_numbers_distribution(10
     }
 
     // read transitions
+    const std::string transitions_file = (split_index == std::string::npos) ? input_folder + "/transitions"
+                                                                            : input_folder + "/split_" + std::to_string(split_index);
     size_t counter = 0;
-    std::ifstream transitions_reader(input_folder + "/transitions");
+    std::ifstream transitions_reader(transitions_file);
     while (getline(transitions_reader, line)) {
         Node* node = &root;
         std::vector<std::string> splitted = split(line, ' ');

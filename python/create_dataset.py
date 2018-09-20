@@ -1,16 +1,33 @@
-import os
-import unicodedata
+# -*- coding: utf-8 -*-
+import random, os, unicodedata
 
 import utils
 
 input_file = '/home/stepan/datasets/europe-hierarchy/preprocessed'
 output_names_dict_file = '/home/stepan/git-repos/typos-corrector/python/model/dataset/names'
 output_transitions_file = '/home/stepan/git-repos/typos-corrector/python/model/dataset/transitions'
+output_transitions_split_prefix = '/home/stepan/git-repos/typos-corrector/python/model/dataset/split_'
+number_of_splits = 10
 
 #### Functions to create names_dict and transitions_dict
 
 def strip_accents(input):
-    return unicodedata.normalize('NFKD', input.decode('utf-8')).encode('ASCII', 'ignore')
+    return unicodedata.normalize('NFKD', input.decode('utf-8'))\
+        .replace(u'ł', u'l' ) \
+        .replace(u'ß', u'ss') \
+        .replace(u'đ', u'd' ) \
+        .replace(u'ı', u'i' ) \
+        .replace(u'Ł', u'l' ) \
+        .replace(u'Ø', u'o' ) \
+        .replace(u'ð', u'o' ) \
+        .replace(u'ø', u'o' ) \
+        .replace(u'Đ', u'd' ) \
+        .replace(u'Æ', u'ae') \
+        .replace(u'œ', u'oe') \
+        .replace(u'Þ', u'p' ) \
+        .replace(u'þ', u'p' ) \
+        .replace(u'æ', u'ae') \
+        .encode('ASCII', 'ignore')
 
 names_dict = {}
 transitions_dict = {}
@@ -35,10 +52,6 @@ def process_buffer(buffer):
         if len(item) == 0 or item[-1] == '|' or len(item.split('|')) != 2 or item[0] == '|':
             print 'bad buffer detected:', buffer
             return
-
-    # !!! REMOVE IT LATER
-    ok = 'netherlands' in buffer[0] or 'germany' in buffer[0] or 'italy' in buffer[0]
-    if not ok: return
 
     dic = transitions_dict
     for line in buffer:
@@ -85,7 +98,7 @@ def work():
     counter = 0
     with open(input_file) as reader:
         for line in reader:
-            line = strip_accents(line.strip().lower())
+            line = strip_accents(line.strip().lower()).lower()
             if line == 'arc end':
                 process_buffer(buffer)
                 buffer = []
@@ -103,10 +116,24 @@ def work():
                     buffer.append(line)
     print_transitions_dict()
     print_names_dict()
+    os.system('sort -n {} | uniq > tmp'.format(output_transitions_file))
+    os.system('mv tmp {}'.format(output_transitions_file))
+
+def split_output_file():
+    writers = []
+    for i in range(number_of_splits):
+        writers.append(open('{}{}'.format(output_transitions_split_prefix, i), 'w'))
+
+    with open(output_transitions_file) as reader:
+        for line in reader:
+            index = random.randint(0, number_of_splits - 1)
+            writers[index].write(line)
+
+    for writer in writers:
+        writer.close()
 
 if __name__ == '__main__':
     if os.path.exists(output_transitions_file): os.remove(output_transitions_file)
     if os.path.exists(output_names_dict_file): os.remove(output_names_dict_file)
     work()
-    print 'created 2 files:', output_names_dict_file, 'and', output_transitions_file
-    print 'now sort and remove duplicates from', output_transitions_file
+    split_output_file()

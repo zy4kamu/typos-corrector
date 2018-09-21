@@ -12,7 +12,7 @@ batch_size = None
 model_file = 'model/model-1/model'
 test_num_iterations = 2500
 test_batch_size = 10000
-lstm_size = 512
+lstm_size = 1024
 compressor_size = 256
 ARGS = None
 

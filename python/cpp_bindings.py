@@ -4,7 +4,7 @@ import numpy as np
 _library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.so')
 
 MESSAGE_SIZE = None
-NUMBER_OF_DATASET_SPLITTINS = 10
+NUMBER_OF_DATASET_SPLITTINS = 6
 
 def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/dataset',
                           mistake_probability=0.2, message_size=15):

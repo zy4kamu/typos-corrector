@@ -7,7 +7,7 @@ input_file = '/home/stepan/datasets/europe-hierarchy/preprocessed'
 output_names_dict_file = '/home/stepan/git-repos/typos-corrector/python/model/dataset/names'
 output_transitions_file = '/home/stepan/git-repos/typos-corrector/python/model/dataset/transitions'
 output_transitions_split_prefix = '/home/stepan/git-repos/typos-corrector/python/model/dataset/split_'
-number_of_splits = 10
+number_of_splits = 6
 
 #### Functions to create names_dict and transitions_dict
 

@@ -3,6 +3,13 @@
 #include "../utils/utils.h"
 
 #include <algorithm>
+#include <fstream>
+
+namespace {
+
+const size_t COUNTRY_SET_HASH_SIZE = 4096 * 4;
+
+} // anonymous namespace
 
 RandomBatchGenerator::RandomBatchGenerator(const DataSet& dataset, const Contaminator& contaminator, size_t message_size)
     : dataset(dataset)
@@ -11,7 +18,7 @@ RandomBatchGenerator::RandomBatchGenerator(const DataSet& dataset, const Contami
     , generator(1) {
 }
 
-std::vector<std::string> RandomBatchGenerator::generate_one_example() {
+std::vector<std::string> RandomBatchGenerator::generate_one_example(std::string* country) {
     while (true) {
         std::vector<const DataSet::Entity*> entities = dataset.get_random_item(generator);
         std::vector<std::string> components;
@@ -19,6 +26,9 @@ std::vector<std::string> RandomBatchGenerator::generate_one_example() {
         for (const DataSet::Entity* entity : entities) {
             switch (entity->type) {
             case 3:   // country
+                if (country != nullptr) {
+                    *country = entity->name;
+                }
                 if (country_distribution(generator) == 0) {
                     components.push_back(entity->name);
                 }
@@ -107,11 +117,11 @@ void RandomBatchGenerator::drop_articles(std::string& token) {
     }
 }
 
-std::string RandomBatchGenerator::get_clean_string(const std::vector<std::string>& example) const {
+std::string RandomBatchGenerator::get_clean_string(const std::vector<std::string>& example, char separator) const {
     std::string message;
     for (const std::string& component : example) {
         if (!message.empty()) {
-            message += "|";
+            message += separator;
         }
         if (contains_digit(component)) {
             message += component;
@@ -135,5 +145,55 @@ void RandomBatchGenerator::generate_random_batch(int32_t* clean_batch, int32_t* 
         int32_t shift = static_cast<int32_t>(i * message_size);
         std::transform(compressed_clean_string.begin(), compressed_clean_string.end(), clean_batch + shift, to_int);
         std::transform(contaminated_string.begin(), contaminated_string.end(), contaminated_batch + shift, to_int);
+    }
+}
+
+std::vector<size_t> RandomBatchGenerator::get_vw_features(const std::string& message) const {
+    std::vector<size_t> features;
+    for (size_t length = 1; length <= message.size(); ++length) {
+        for (size_t i = 0; i + length < message.length(); ++i) {
+            const std::string feature = message.substr(i, length);
+            features.push_back(std::hash<std::string>{}(feature) % COUNTRY_SET_HASH_SIZE);
+        }
+    }
+    return features;
+}
+
+void RandomBatchGenerator::generate_country_dataset(const std::string& output_file, size_t size,
+                                                    std::map<std::string, size_t>& country_to_index) {
+    std::string country;
+    std::ofstream writer(output_file);
+    for (size_t i = 0; i < size;) {
+        const std::vector<std::string> example = generate_one_example(&country);
+        if (country_to_index.find(country) == country_to_index.end()) {
+            size_t number_of_countries = country_to_index.size();
+            country_to_index[country] = 1 + number_of_countries;
+        }
+        const std::string clean_string = get_clean_string(example, ' ');
+        if (clean_string.length() < 5) {
+            continue;
+        }
+        std::vector<size_t> features = get_vw_features(clean_string);
+        writer << country_to_index[country] << " |";
+        for (const size_t feature : features) {
+            writer << " " << feature;
+        }
+        writer << "\n";
+        ++i;
+    }
+}
+
+void RandomBatchGenerator::generate_country_dataset(const std::string& output_folder, size_t train_size, size_t test_size) {
+    std::map<std::string, size_t> country_to_index;
+    generate_country_dataset(output_folder + "train", train_size, country_to_index);
+    generate_country_dataset(output_folder + "test", test_size, country_to_index);
+
+    std::vector<std::string> countries(country_to_index.size());
+    for (const auto& kvp : country_to_index) {
+        countries[kvp.second - 1] = kvp.first;
+    }
+    std::ofstream writer(output_folder + "countries");
+    for (const std::string& country : countries) {
+        writer << country << std::endl;
     }
 }

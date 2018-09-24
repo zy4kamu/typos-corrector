@@ -116,7 +116,6 @@ class Network(object):
                                                                       float(dummy_num_correct) / float(test_num_letters))
                 print 'levenstein: {}'.format(float(sum_levenstein) / float(test_batch_size))
                 print ''
-                generate_cpp_bindings()
 
             # update gradient
             clean, contaminated = cpp_bindings.generate_random_batch(batch_size)

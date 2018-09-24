@@ -4,9 +4,8 @@ import numpy as np
 _library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.so')
 
 MESSAGE_SIZE = None
-NUMBER_OF_DATASET_SPLITTINS = 6
 
-def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/dataset',
+def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/dataset/north',
                           mistake_probability=0.2, message_size=15):
     global MESSAGE_SIZE
     MESSAGE_SIZE = message_size
@@ -54,9 +53,7 @@ def _set_dataset_folder(dataset_folder):
     _library.set_dataset_folder(ctypes.c_char_p(dataset_folder))
 
 def _create_dataset():
-    split_index = random.randint(0, NUMBER_OF_DATASET_SPLITTINS - 1)
-    print "Using split index:", split_index
-    _library.create_dataset(ctypes.c_size_t(split_index))
+    _library.create_dataset(ctypes.c_size_t(-1))
 
 
 def _create_contaminator(ngrams_file, mistake_probability):

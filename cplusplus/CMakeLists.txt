@@ -31,6 +31,7 @@ endif ()
 
 add_subdirectory(utils)
 add_subdirectory(dataset)
+add_subdirectory(vw-model)
 
 if (BUILD_PYTHON_BINDINGS)
     add_subdirectory(dataset-generator)

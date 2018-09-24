@@ -15,10 +15,14 @@ class RandomBatchGenerator {
 public:
     RandomBatchGenerator(const DataSet& dataset, const Contaminator& contaminator, size_t message_size);
     void generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size);
+    void generate_country_dataset(const std::string& output_folder, size_t train_size, size_t test_size);
 private:
-    std::vector<std::string> generate_one_example();
-    std::string get_clean_string(const std::vector<std::string>& example) const;
+    void generate_country_dataset(const std::string& output_file, size_t size,
+                                  std::map<std::string, size_t>& country_to_index);
+    std::vector<std::string> generate_one_example(std::string* country = nullptr);
+    std::string get_clean_string(const std::vector<std::string>& example, char separator='|') const;
     void drop_articles(std::string& token);
+    std::vector<size_t> get_vw_features(const std::string& message) const;
 
     const DataSet&      dataset;
     const Contaminator& contaminator;

@@ -30,8 +30,8 @@ DataSet::DataSet(const std::string& input_folder, size_t split_index): house_num
     }
 
     // read transitions
-    const std::string transitions_file = (split_index == std::string::npos) ? input_folder + "/transitions"
-                                                                            : input_folder + "/split_" + std::to_string(split_index);
+    const std::string transitions_file = (split_index == static_cast<size_t>(-1)) ? input_folder + "/transitions"
+                                                                                  : input_folder + "/split_" + std::to_string(split_index);
     size_t counter = 0;
     std::ifstream transitions_reader(transitions_file);
     while (getline(transitions_reader, line)) {

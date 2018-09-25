@@ -5,7 +5,7 @@ _library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.
 
 MESSAGE_SIZE = None
 
-def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/dataset/north',
+def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/dataset/all',
                           mistake_probability=0.2, message_size=15):
     global MESSAGE_SIZE
     MESSAGE_SIZE = message_size

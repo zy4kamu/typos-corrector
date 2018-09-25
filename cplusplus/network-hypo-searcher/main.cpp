@@ -27,7 +27,7 @@ void test_hypo_searcher(int argc, char* argv[]) {
         input_folder = argv[1];
         input_folder += "/";
     }
-    DataSetRequester requester(input_folder + "dataset");
+    DataSetRequester requester(input_folder + "dataset/north");
     HypoSearcher searcher(input_folder + "parameters/",
                           input_folder + "first-mistake-statistics");
     std::string input;

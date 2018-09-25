@@ -13,7 +13,7 @@ model_file = 'model/model-1/model'
 test_num_iterations = 2500
 test_batch_size = 10000
 lstm_size = 512
-compressor_size = 128
+compressor_size = 128 + 64
 ARGS = None
 
 #TODO: play with forget bias
@@ -436,7 +436,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train and test neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
                         choices=['train', 'continue', 'play', 'test', 'check'])
-    parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/dataset')
+    parser.add_argument('-i', '--input-folder',        type=str,   help='folder with tokens',            default='model/dataset/north')
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
     parser.add_argument('-f', '--model-file',          type=str,   help='file with binary model',        default=None)

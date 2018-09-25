@@ -1,8 +1,11 @@
 #include "vw-model.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <limits>
 
 namespace NVWModel {
 
@@ -39,13 +42,14 @@ VWModel::VWModel(const std::string& input_folder) {
     while (getline(labels_reader, line)) {
         labels.push_back(std::move(line));
     }
-    predictions.resize(labels.size(), 0);
     weights = read_file(input_folder + "/data");
     num_labels = labels.size();
     num_features = weights.size() / num_labels - 1;
 }
 
-const std::vector<float_type>& VWModel::predict(const std::string& message) const {
+std::vector<std::pair<std::string, float_type>> VWModel::predict(const std::string& message) const {
+    // calculate logits
+    std::vector<float_type> predictions(num_labels);
     std::vector<size_t> features = create_features(message);
     std::memcpy(predictions.data(), weights.data() + num_features * num_labels, sizeof(float_type) * num_labels);
     for (size_t feature : features) {
@@ -54,7 +58,35 @@ const std::vector<float_type>& VWModel::predict(const std::string& message) cons
             predictions[i] += pointer[i];
         }
     }
-    return predictions;
+
+    // caclulate probabilities
+    float_type max = std::numeric_limits<float_type>::min();
+    for (float_type value : predictions) {
+        max = std::max(max, value);
+    }
+    float_type sum = 0;
+    for (float_type& value : predictions) {
+        value -= max;
+        value = std::exp(value);
+        sum += value;
+    }
+    for (float_type& value : predictions) {
+        value /= sum;
+    }
+
+    // sort by logit
+    std::vector<size_t> indexes;
+    for (size_t i = 0; i < predictions.size(); ++i) {
+        indexes.push_back(i);
+    }
+    std::sort(indexes.begin(), indexes.end(), [&predictions](size_t i, size_t j) { return predictions[i] > predictions[j]; });
+
+    // prepare result list
+    std::vector<std::pair<std::string, float_type>> result;
+    for (size_t index : indexes) {
+        result.push_back(std::make_pair(labels[index], predictions[index]));
+    }
+    return result;
 }
 
 } // namespace NVWModel

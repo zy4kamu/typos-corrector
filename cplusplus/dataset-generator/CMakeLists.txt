@@ -5,4 +5,4 @@ add_library(dataset-generator SHARED contaminator.cpp random-batch-generator.cpp
 target_link_libraries(dataset-generator)
 
 add_executable(dataset-generator-app main.cpp)
-target_link_libraries(dataset-generator-app dataset-generator dataset)
+target_link_libraries(dataset-generator-app dataset-generator dataset network-hypo-searcher)

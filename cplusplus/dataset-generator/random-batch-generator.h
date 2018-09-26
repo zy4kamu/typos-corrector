@@ -16,6 +16,7 @@ public:
     RandomBatchGenerator(const DataSet& dataset, const Contaminator& contaminator, size_t message_size);
     void generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch, size_t batch_size);
     void generate_country_dataset(const std::string& output_folder, size_t train_size, size_t test_size);
+    void next(std::string& clean, std::string& contaminated);
 private:
     void generate_country_dataset(const std::string& output_file, size_t size,
                                   std::map<std::string, size_t>& country_to_index);

@@ -14,20 +14,21 @@ if (USE_OPENCL)
         link_directories("${CMAKE_CURRENT_SOURCE_DIR}/../opencl-connector/lib")
     endif ()
 
-    add_executable(network-hypo-searcher common.cpp
-                                         compressed-lstm-gpu.cpp
-                                         hypo-searcher.cpp
-                                         main.cpp
-                                         network-automata-gpu.cpp)
-
+    add_library(network-hypo-searcher SHARED common.cpp
+                                             compressed-lstm-gpu.cpp
+                                             i-database-requester.cpp
+                                             hypo-searcher.cpp
+                                             network-automata-gpu.cpp)
     target_link_libraries(network-hypo-searcher dataset opencl-connector utils)
+    add_executable(network-hypo-searcher-app main.cpp)
+    target_link_libraries(network-hypo-searcher-app network-hypo-searcher)
 else()
-    add_executable(network-hypo-searcher common.cpp
-                                         compressed-lstm-cpu.cpp
-                                         i-database-requester.cpp
-                                         hypo-searcher.cpp
-                                         main.cpp
-                                         network-automata-cpu.cpp)
-
+    add_library(network-hypo-searcher SHARED common.cpp
+                                             compressed-lstm-cpu.cpp
+                                             i-database-requester.cpp
+                                             hypo-searcher.cpp
+                                             network-automata-cpu.cpp)
     target_link_libraries(network-hypo-searcher dataset utils)
+    add_executable(network-hypo-searcher-app main.cpp)
+    target_link_libraries(network-hypo-searcher-app network-hypo-searcher)
 endif()

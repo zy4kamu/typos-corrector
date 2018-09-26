@@ -197,3 +197,9 @@ void RandomBatchGenerator::generate_country_dataset(const std::string& output_fo
         writer << country << std::endl;
     }
 }
+
+void RandomBatchGenerator::next(std::string& clean, std::string& contaminated) {
+    std::vector<std::string> example = generate_one_example();
+    clean = get_clean_string(example);
+    contaminated = contaminator.contaminate(example, message_size);
+}

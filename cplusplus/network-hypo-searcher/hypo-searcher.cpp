@@ -38,12 +38,11 @@ bool HypoNodePointerComparator::operator()(const HypoNode* first, const HypoNode
     return (first->logit > second->logit) || ((first->logit == second->logit) && (first > second));
 }
 
-HypoSearcher::HypoSearcher(const std::string& lstm_folder,
-                           const std::string& first_mistake_file)
+HypoSearcher::HypoSearcher(const std::string& lstm_folder)
     : automata(lstm_folder)
     , max_prefix_length(std::string::npos)
     , current_probabilities(NUM_LETTERS) {
-    read_first_mistake_statistics(first_mistake_file);
+    read_first_mistake_statistics(lstm_folder + "/first-mistake-statistics");
 }
 
 void HypoSearcher::reset() {
@@ -116,7 +115,10 @@ bool HypoSearcher::check_hypo_in_database(IDataBaseRequester& requester) {
             prefix_length += prefix_length > 0 ? current_token.length() + 1 : current_token.length();
         } else {
             size_t one_token_max_prefix_length = requester.find_max_prefix_one_token(current_token);
-            prefix_length += prefix_length > 0 ? current_token.length() + 1 : one_token_max_prefix_length;
+            prefix_length += prefix_length > 0 ? one_token_max_prefix_length + 1 : one_token_max_prefix_length;
+            if (one_token_max_prefix_length != current_token.length()) {
+                break;
+            }
         }
     }
     if (max_prefix_length == std::string::npos || prefix_length > max_prefix_length) {

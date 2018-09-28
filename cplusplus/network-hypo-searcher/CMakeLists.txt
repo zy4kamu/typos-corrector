@@ -18,8 +18,9 @@ if (USE_OPENCL)
                                              compressed-lstm-gpu.cpp
                                              i-database-requester.cpp
                                              hypo-searcher.cpp
+                                             multi-hypo-searcher.cpp
                                              network-automata-gpu.cpp)
-    target_link_libraries(network-hypo-searcher dataset opencl-connector utils)
+    target_link_libraries(network-hypo-searcher dataset opencl-connector utils vw-model)
     add_executable(network-hypo-searcher-app main.cpp)
     target_link_libraries(network-hypo-searcher-app network-hypo-searcher)
 else()
@@ -27,8 +28,9 @@ else()
                                              compressed-lstm-cpu.cpp
                                              i-database-requester.cpp
                                              hypo-searcher.cpp
+                                             multi-hypo-searcher.cpp
                                              network-automata-cpu.cpp)
-    target_link_libraries(network-hypo-searcher dataset utils)
+    target_link_libraries(network-hypo-searcher dataset utils vw-model)
     add_executable(network-hypo-searcher-app main.cpp)
     target_link_libraries(network-hypo-searcher-app network-hypo-searcher)
 endif()

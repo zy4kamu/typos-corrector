@@ -5,6 +5,10 @@
 
 #include <iostream>
 
+// SOUTH:  95.64%
+// SLAVIC: 97.26%
+// NORTH:  97.86%
+
 const size_t MESSAGE_SIZE = 25;
 
 struct DataSetRequester : public NNetworkHypoSearcher::IDataBaseRequester {
@@ -18,14 +22,13 @@ private:
     const DataSet& dataset;
 };
 
-int main(int argc, char* argv[]) {
+void check_accuracy() {
     const std::string input_folder = "/home/stepan/git-repos/typos-corrector/python/model/";
     DataSet dataset(input_folder + "dataset/slavic");
     Contaminator contaminator(input_folder + "ngrams", 0.2);
     RandomBatchGenerator batch_generator(dataset, contaminator, MESSAGE_SIZE);
     DataSetRequester requester(dataset);
-    NNetworkHypoSearcher::HypoSearcher searcher(input_folder + "parameters/",
-                                                input_folder + "first-mistake-statistics");
+    NNetworkHypoSearcher::HypoSearcher searcher(input_folder + "parameters/");
 
     std::string real, contaminated;
     size_t num_found = 0;
@@ -43,4 +46,18 @@ int main(int argc, char* argv[]) {
         std::cout << num_found << " of " << 10000 << "; accuracy="
                   << static_cast<double>(num_found) / static_cast<double>(i + 1) << std::endl;
     }
+}
+
+void generate_country_dataset() {
+    std::mt19937 generator(1);
+    DataSet dataset("/home/stepan/git-repos/typos-corrector/python/model/dataset/north");
+    Contaminator contaminator("/home/stepan/git-repos/typos-corrector/python/model/ngrams", 0.2);
+    RandomBatchGenerator batch_generator(dataset, contaminator, MESSAGE_SIZE);
+    batch_generator.generate_country_dataset("/home/stepan/git-repos/typos-corrector/country-dataset/dataset/", 1000, 1000);
+}
+
+
+int main(int argc, char* argv[]) {
+    // check_accuracy();
+    generate_country_dataset();
 }

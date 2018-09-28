@@ -40,8 +40,7 @@ using AutomataNodesSet = std::set<HypoNode*, HypoNodePointerComparator>;
 
 class HypoSearcher {
 public:
-    HypoSearcher(const std::string& lstm_folder,
-                 const std::string& first_mistake_file);
+    HypoSearcher(const std::string& lstm_folder);
     void initialize(const std::string& input);
     const std::string& generate_next_hypo();
     bool check_hypo_in_database(IDataBaseRequester& requester);

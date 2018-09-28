@@ -20,13 +20,22 @@ int entity_type_to_int(const std::string& type) {
 
 } // anonymous namespace
 
-DataSet::DataSet(const std::string& input_folder, size_t split_index): house_numbers_distribution(1000000) {
+DataSet::DataSet(const std::string& input_folder, size_t split_index, bool use_transitions): house_numbers_distribution(1000000) {
     // read names file
     std::ifstream names_reader(input_folder + "/names");
     std::string line;
     while (getline(names_reader, line)) {
         std::vector<std::string> splitted = split(line, '|');
         index_to_name[std::stoi(splitted[1])] = { entity_type_to_int(splitted[0]), splitted[2] };
+    }
+
+    // save all tokens in a set for prefix search
+    for (const auto& item : index_to_name) {
+        tokens.insert(item.second.name);
+    }
+
+    if (!use_transitions) {
+        return;
     }
 
     // read transitions
@@ -53,11 +62,6 @@ DataSet::DataSet(const std::string& input_folder, size_t split_index): house_num
 
     // create transition distributions for each node
     root.finalize();
-
-    // save all tokens in a set for prefix search
-    for (const auto& item : index_to_name) {
-        tokens.insert(item.second.name);
-    }
 }
 
 DataSet::Node* DataSet::Node::add(size_t index) {

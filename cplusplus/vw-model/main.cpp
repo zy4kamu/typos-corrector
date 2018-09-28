@@ -4,7 +4,7 @@
 #include <iostream>
 
 int main() {
-    NVWModel::VWModel model("/home/stepan/country-dataset/model");
+    NVWModel::VWModel model("/home/stepan/git-repos/typos-corrector/country-dataset/model");
     std::string input;
     while (true) {
         std::cout << "Input something: ";

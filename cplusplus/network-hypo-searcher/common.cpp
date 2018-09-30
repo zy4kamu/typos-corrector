@@ -5,6 +5,11 @@
 #include <cmath>
 #include <fstream>
 
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include "../utils/utils.h"
 
 namespace NNetworkHypoSearcher {
@@ -12,13 +17,30 @@ namespace NNetworkHypoSearcher {
 const size_t MESSAGE_SIZE = 25;
 
 std::vector<float_type> read_file(const std::string& filename) {
-    std::vector<float_type> data;
-    std::ifstream file(filename, std::ios::binary);
-    float_type item;
-    while (file.read(reinterpret_cast<char*>(&item), sizeof(float_type))) {
-        data.push_back(item);
+    int file_desrciptor;
+    if ((file_desrciptor = open(filename.c_str(), O_RDONLY)) < 0) {
+        perror("read_file: couldn't create file descriptor");
     }
-    return data;
+
+    struct stat file_statistics;
+    if (fstat(file_desrciptor, &file_statistics) < 0) {
+        perror("read_file: couldn't find file size");
+    }
+    size_t file_size = file_statistics.st_size;
+
+    void *source;
+    if ((source = mmap(0, file_size, PROT_READ, MAP_SHARED, file_desrciptor, 0)) == MAP_FAILED) {
+        perror("read_file: couldn't use mmap to map file to pointer");
+    }
+
+    std::vector<float_type> content(file_size / sizeof(float_type));
+    memcpy(content.data(), source, file_size);
+
+    if (munmap(source, file_size) < 0) {
+        perror("read_file: couldn't munmap");
+    }
+    close(file_desrciptor);
+    return content;
 }
 
 void vector_matrix_multiply(const float_type* vector, const float_type* matrix, size_t num_rows, size_t num_cols,

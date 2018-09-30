@@ -20,11 +20,24 @@ struct DataSetRequester : private DataSet, public IDataBaseRequester {
     }
 };
 
+double elapsed_time(std::chrono::time_point<std::chrono::steady_clock> start,
+                    std::chrono::time_point<std::chrono::steady_clock> end) {
+    return static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) / 1000000;
+}
+
 } // anonymous namespace
 
 void test_hypo_searcher() {
+    auto start = std::chrono::steady_clock::now();
     DataSetRequester requester(INPUT_FOLDER + "dataset/all");
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "downloaded dataset in " << elapsed_time(start, end) << " seconds" << std::endl;
+
+    start = std::chrono::steady_clock::now();
     HypoSearcher searcher(INPUT_FOLDER + "good-models/north-97.93/");
+    end = std::chrono::steady_clock::now();
+    std::cout << "downloaded dataset in " << elapsed_time(start, end) << " seconds" << std::endl;
+
     std::string input;
     while (true) {
         std::cout << "Input something: ";
@@ -42,7 +55,7 @@ void test_hypo_searcher() {
             }
         }
         auto end = std::chrono::steady_clock::now();
-        std::cout << "spent " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ...\n" << std::endl;
+        std::cout << "spent " << elapsed_time(start, end) << " seconds ...\n" << std::endl;
     }
 }
 
@@ -88,6 +101,6 @@ void test_dataset_generator() {
 
 int main(int argc, char* argv[]) {
     // test_dataset_generator();
-    // test_hypo_searcher();
-    test_multi_hypo_searcher();
+    test_hypo_searcher();
+    // test_multi_hypo_searcher();
 }

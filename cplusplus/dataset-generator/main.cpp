@@ -22,6 +22,7 @@ private:
     const DataSet& dataset;
 };
 
+// DOESN'T WORK, BROKEN
 void check_accuracy() {
     const std::string input_folder = "/home/stepan/git-repos/typos-corrector/python/model/";
     DataSet dataset(input_folder + "dataset/slavic");

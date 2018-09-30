@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
-import random, os, unicodedata
+import os, unicodedata, shutil
 
 import utils
 
-input_file = '/home/stepan/datasets/europe-hierarchy/preprocessed'
-output_names_dict_file = '/home/stepan/git-repos/typos-corrector/python/model/dataset/names'
-output_transitions_file = '/home/stepan/git-repos/typos-corrector/python/model/dataset/transitions'
-output_transitions_split_prefix = '/home/stepan/git-repos/typos-corrector/python/model/dataset/split_'
-number_of_splits = 6
 
-#### Functions to create names_dict and transitions_dict
+input_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/preprocessed/data')
+output_folder = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/all')
+output_transitions_file = os.path.join(output_folder, 'data')
+output_names_dict_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/names')
+by_country_folder = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/by-country')
+
+# Functions to create names_dict and transitions_dict
+
+names_dict = {}
+transitions_dict = {}
+
 
 def strip_accents(input):
     return unicodedata.normalize('NFKD', input.decode('utf-8'))\
@@ -29,8 +34,6 @@ def strip_accents(input):
         .replace(u'æ', u'ae') \
         .encode('ASCII', 'ignore')
 
-names_dict = {}
-transitions_dict = {}
 
 def get_from_names_dict(key):
     if key in names_dict:
@@ -40,12 +43,14 @@ def get_from_names_dict(key):
         names_dict[key] = to_add
         return to_add
 
+
 def get_from_transitions_dict(dic, key):
     if key in dic:
         return dic[key]
     else:
         dic[key] = {}
         return dic[key]
+
 
 def process_buffer(buffer):
     for item in buffer:
@@ -93,7 +98,9 @@ def print_transitions_dict():
 
 # Main input function
 
-def work():
+def create_all_dataset_folder():
+    if os.path.exists(output_folder): shutil.rmtree(output_folder)
+    os.mkdir(output_folder)
     buffer = []
     counter = 0
     with open(input_file) as reader:
@@ -119,21 +126,75 @@ def work():
     os.system('sort -n {} | uniq > tmp'.format(output_transitions_file))
     os.system('mv tmp {}'.format(output_transitions_file))
 
-def split_output_file():
-    writers = []
-    for i in range(number_of_splits):
-        writers.append(open('{}{}'.format(output_transitions_split_prefix, i), 'w'))
+def separate_by_country():
+    if os.path.exists(by_country_folder):
+        shutil.rmtree(by_country_folder)
+    os.mkdir(by_country_folder)
 
+    # create index_to_country
+    index_to_country_writer = {}
+    with open(output_names_dict_file) as reader:
+        for line in reader:
+            type, index, country = line.strip().split('|')
+            if type != '3': break
+            if not index in index_to_country_writer:
+                country_folder = os.path.join(by_country_folder, country)
+                os.mkdir(country_folder)
+                output_file = os.path.join(country_folder, 'data')
+                index_to_country_writer[index] = open(output_file, 'w')
+
+    # iterate over file
     with open(output_transitions_file) as reader:
         for line in reader:
-            index = random.randint(0, number_of_splits - 1)
-            writers[index].write(line)
+            index = line.split(' ')[0]
+            index_to_country_writer[index].write(line)
 
-    for writer in writers:
+    # close all writers
+    for writer in index_to_country_writer.values():
         writer.close()
 
+def create_ngrams():
+    names_dict = {}
+    with open(output_names_dict_file) as reader:
+        for line in reader:
+            type, index, country = line.strip().split('|')
+            names_dict[index] = country
+
+    ngram_size = 3
+    spaces = (' ' * ngram_size)
+    for country in os.listdir(by_country_folder):
+        print 'working with', country
+        # create ngrams
+        ngrams = {}
+        with open(os.path.join(by_country_folder, country + '/data')) as reader:
+            for line in reader:
+                splitted = line.strip().split(' ')
+                for index in splitted:
+                    token = names_dict[index]
+                    token = spaces + token.strip() + spaces
+                    for i in range(len(token) - ngram_size):
+                        ngram = token[i:i + ngram_size]
+                        next_char = token[i + ngram_size]
+                        if ngrams.get(ngram) is None:
+                            ngrams[ngram] = {}
+                        chars = ngrams[ngram]
+                        chars[next_char] = chars.get(next_char, 0) + 1
+        # print ngrams
+        with open(os.path.join(by_country_folder, country + '/ngrams'), 'w') as writer:
+            for k1, v1 in ngrams.iteritems():
+                for k2, v2 in v1.iteritems():
+                    writer.write('{}|{}|{}\n'.format(k1, k2, v2))
+
+def create_names_symlinks():
+    for country in os.listdir(by_country_folder):
+        os.symlink(output_names_dict_file, os.path.join(by_country_folder, country + "/names"))
+
 if __name__ == '__main__':
-    if os.path.exists(output_transitions_file): os.remove(output_transitions_file)
-    if os.path.exists(output_names_dict_file): os.remove(output_names_dict_file)
-    work()
-    split_output_file()
+    print 'step 0: creating {} from {}'.format(input_file, output_folder)
+    create_all_dataset_folder()
+    print 'step 1: separate {} to {}'.format(output_folder, by_country_folder)
+    separate_by_country()
+    print 'step 2: creating ngrams'
+    create_ngrams()
+    print 'step3: creating symlinks for names'
+    create_names_symlinks()

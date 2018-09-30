@@ -5,14 +5,13 @@ _library = ctypes.cdll.LoadLibrary('../build/python-bindings/libpython-bindings.
 
 MESSAGE_SIZE = None
 
-def generate_cpp_bindings(ngrams_file='model/ngrams', dataset_folder='model/dataset/all',
-                          mistake_probability=0.2, message_size=15):
+def generate_cpp_bindings(country, mistake_probability, message_size):
     global MESSAGE_SIZE
     MESSAGE_SIZE = message_size
     _reset()
-    _set_dataset_folder(dataset_folder)
+    _set_dataset_folder('../dataset/by-country/' + country)
     _create_dataset()
-    _create_contaminator(ngrams_file, mistake_probability)
+    _create_contaminator('../dataset/by-country/{}/ngrams'.format(country), mistake_probability)
     _create_random_batch_generator()
 
 

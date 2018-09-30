@@ -39,7 +39,7 @@ DataSet::DataSet(const std::string& input_folder, size_t split_index, bool use_t
     }
 
     // read transitions
-    const std::string transitions_file = (split_index == static_cast<size_t>(-1)) ? input_folder + "/transitions"
+    const std::string transitions_file = (split_index == static_cast<size_t>(-1)) ? input_folder + "/data"
                                                                                   : input_folder + "/split_" + std::to_string(split_index);
     std::cout << "reading dataset from file: " << transitions_file << std::endl;
     size_t counter = 0;

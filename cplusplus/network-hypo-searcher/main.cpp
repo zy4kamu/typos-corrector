@@ -9,7 +9,7 @@ using namespace NNetworkHypoSearcher;
 namespace {
 
 const size_t MAX_PASS = 20;
-const std::string INPUT_FOLDER = "/home/stepan/git-repos/typos-corrector/python/model/";
+const std::string INPUT_FOLDER = "/home/stepan/git-repos/typos-corrector/";
 
 struct DataSetRequester : private DataSet, public IDataBaseRequester {
     DataSetRequester(const std::string& input_folder): DataSet(input_folder, std::string::npos, false) {
@@ -27,16 +27,16 @@ double elapsed_time(std::chrono::time_point<std::chrono::steady_clock> start,
 
 } // anonymous namespace
 
-void test_hypo_searcher() {
+void test_hypo_searcher(const std::string& country) {
     auto start = std::chrono::steady_clock::now();
-    DataSetRequester requester(INPUT_FOLDER + "dataset/all");
+    DataSetRequester requester(INPUT_FOLDER + "dataset/by-country/" + country);
     auto end = std::chrono::steady_clock::now();
     std::cout << "downloaded dataset in " << elapsed_time(start, end) << " seconds" << std::endl;
 
     start = std::chrono::steady_clock::now();
-    HypoSearcher searcher(INPUT_FOLDER + "good-models/north-97.93/");
+    HypoSearcher searcher(INPUT_FOLDER + "python/models/binaries/" + country);
     end = std::chrono::steady_clock::now();
-    std::cout << "downloaded dataset in " << elapsed_time(start, end) << " seconds" << std::endl;
+    std::cout << "downloaded model in " << elapsed_time(start, end) << " seconds" << std::endl;
 
     std::string input;
     while (true) {
@@ -59,6 +59,7 @@ void test_hypo_searcher() {
     }
 }
 
+// DOESN'T WORK, BROKEN
 void test_multi_hypo_searcher() {
     DataSetRequester requester(INPUT_FOLDER + "dataset/all");
     MultiHypoSearcher searcher({ INPUT_FOLDER + "/good-models/north-97.93/",
@@ -87,20 +88,7 @@ void test_multi_hypo_searcher() {
     }
 }
 
-void test_dataset_generator() {
-    std::mt19937 generator(1);
-    DataSet dataset("/home/stepan/datasets/europe-hierarchy");
-    for (size_t i = 0; i < 100; ++i) {
-        std::vector<const DataSet::Entity*> entities = dataset.get_random_item(generator);
-        for (const DataSet::Entity* entity : entities) {
-            std::cout << entity->type << " " << entity->name << std::endl;
-        }
-        std::cout << std::endl << std::endl;
-    }
-}
-
 int main(int argc, char* argv[]) {
-    // test_dataset_generator();
-    test_hypo_searcher();
+    test_hypo_searcher("the netherlands");
     // test_multi_hypo_searcher();
 }

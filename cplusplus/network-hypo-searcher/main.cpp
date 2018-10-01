@@ -89,6 +89,6 @@ void test_multi_hypo_searcher() {
 }
 
 int main(int argc, char* argv[]) {
-    test_hypo_searcher("the netherlands");
+    test_hypo_searcher("italy");
     // test_multi_hypo_searcher();
 }

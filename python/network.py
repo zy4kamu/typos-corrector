@@ -195,7 +195,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
                         choices=['train', 'continue'])
-    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='germany'),
+    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='united kingdom'),
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)

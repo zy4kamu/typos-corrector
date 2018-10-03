@@ -15,7 +15,7 @@ struct DataSetRequester : public NNetworkHypoSearcher::IDataBaseRequester {
     DataSetRequester(const DataSet& dataset): dataset(dataset) {
     }
 
-    bool is_present_in_database(const std::string& token) const override {
+    bool is_one_entity_present_in_database(const std::string& token) const override {
         return !dataset.find_by_prefix(token, 1).empty();
     }
 private:

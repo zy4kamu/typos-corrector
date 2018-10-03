@@ -1,7 +1,9 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <unordered_map>
 
 #include "hypo-searcher.h"
@@ -10,18 +12,34 @@
 
 namespace NNetworkHypoSearcher {
 
+enum class CommandType {
+    Initialize,
+    SearchUncorrected,
+    InitializeCorrector,
+    SearchCorrected
+};
+
+struct Command {
+    CommandType type;
+    std::string country;
+};
+
 class MultiHypoSearcher {
 public:
-    MultiHypoSearcher(const std::vector<std::string>& input_folders, const std::string& vw_model_file);
-    std::string initialize(const std::string& input);
-    const std::string& generate_next_hypo();
-    bool check_hypo_in_database(IDataBaseRequester& requester);
+    MultiHypoSearcher(const std::string& typos_corrector_folder,
+                      const std::vector<std::string>& countries,
+                      const std::string& vw_model_file);
+    void initialize(const std::string& initial_query, size_t num_attempts);
+    bool next(std::string& country, std::string& hypo);
+    bool check(IDataBaseRequester& requester);
 private:
     NVWModel::VWModel vw_model;
-    std::vector<HypoSearcher> hypo_searchers;
-    std::unordered_map<std::string, size_t> country_to_searcher_index;
+    std::unordered_map<std::string, std::unique_ptr<HypoSearcher>> country_to_searcher;
+    std::vector<Command> commands;
+    std::vector<Command>::const_iterator commands_iterator;
 
-    HypoSearcher* current_searcher;
+    std::string initial_query;
+    std::string current_query;
 };
 
 } // namespace NNetworkHypoSearcher

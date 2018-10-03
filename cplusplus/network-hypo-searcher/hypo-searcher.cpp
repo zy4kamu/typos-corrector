@@ -107,20 +107,7 @@ const std::string& HypoSearcher::generate_next_hypo() {
 }
 
 bool HypoSearcher::check_hypo_in_database(IDataBaseRequester& requester) {
-    size_t prefix_length = 0;
-    std::stringstream reader(current_hypo);
-    std::string current_token;
-    while (getline(reader, current_token, '|')) {
-        if (contains_digit(current_token)) {
-            prefix_length += prefix_length > 0 ? current_token.length() + 1 : current_token.length();
-        } else {
-            size_t one_token_max_prefix_length = requester.find_max_prefix_one_token(current_token);
-            prefix_length += prefix_length > 0 ? one_token_max_prefix_length + 1 : one_token_max_prefix_length;
-            if (one_token_max_prefix_length != current_token.length()) {
-                break;
-            }
-        }
-    }
+    size_t prefix_length = requester.find_max_prefix_full_query(current_hypo);
     if (max_prefix_length == std::string::npos || prefix_length > max_prefix_length) {
         max_prefix_length = prefix_length;
     }
@@ -139,6 +126,15 @@ void HypoSearcher::read_first_mistake_statistics(const std::string& first_mistak
     for (float_type& item : first_mistake_statistics) {
         item = std::log(first_mistake_statistics.back() / item);
     }
+    float_type sum = 0;
+    for (float_type item : first_mistake_statistics) {
+        sum += item;
+    }
+    probability_to_correct = first_mistake_statistics.back() / sum;
+}
+
+float_type HypoSearcher::get_probability_to_correct() const {
+    return probability_to_correct;
 }
 
 } // namespace NNetworkHypoSearcher

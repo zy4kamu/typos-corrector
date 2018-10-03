@@ -15,7 +15,7 @@ struct DataSetRequester : private DataSet, public IDataBaseRequester {
     DataSetRequester(const std::string& input_folder): DataSet(input_folder, std::string::npos, false) {
     }
 
-    bool is_present_in_database(const std::string& token) const override {
+    bool is_one_entity_present_in_database(const std::string& token) const override {
         return !DataSet::find_by_prefix(token, 1).empty();
     }
 };
@@ -59,25 +59,31 @@ void test_hypo_searcher(const std::string& country) {
     }
 }
 
-// DOESN'T WORK, BROKEN
 void test_multi_hypo_searcher() {
-    DataSetRequester requester(INPUT_FOLDER + "dataset/all");
-    MultiHypoSearcher searcher({ INPUT_FOLDER + "/good-models/north-97.93/",
-                                 INPUT_FOLDER + "/good-models/slavic+english-97.6/",
-                                 INPUT_FOLDER + "/good-models/south-98.3/" },
-                               "/home/stepan/country-dataset/model");
-    std::string input;
+    auto start = std::chrono::steady_clock::now();
+    DataSetRequester requester(INPUT_FOLDER + "dataset/");
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "downloaded dataset in " << elapsed_time(start, end) << " seconds" << std::endl;
+
+    start = std::chrono::steady_clock::now();
+    MultiHypoSearcher searcher(INPUT_FOLDER + "python/models/binaries/",
+                               { "the netherlands", "united kingdom", "italy" },
+                               "/home/stepan/git-repos/typos-corrector/country-dataset/model");
+    end = std::chrono::steady_clock::now();
+    std::cout << "downloaded model in " << elapsed_time(start, end) << " seconds" << std::endl;
+
+    const size_t num_attempts = 40;
+    std::string input, country, corrected_hypo;
     while (true) {
         std::cout << "Input something: ";
         std::getline(std::cin, input);
 
         auto start = std::chrono::steady_clock::now();
-        const std::string country = searcher.initialize(input);
-        std::cout << "predicted country: " << country << std::endl;
-        for (size_t i = 0; i < 20; ++i) {
-            const std::string& hypo = searcher.generate_next_hypo();
-            std::cout << hypo << std::endl;
-            bool found_full_match = searcher.check_hypo_in_database(requester);
+        searcher.initialize(input, num_attempts);
+        for (size_t i = 0; i < num_attempts; ++i) {
+            searcher.next(country, corrected_hypo);
+            std::cout << country << ": " << corrected_hypo << std::endl;
+            bool found_full_match = searcher.check(requester);
             if (found_full_match) {
                 std::cout << "found :-)" << std::endl;
                 break;
@@ -89,6 +95,6 @@ void test_multi_hypo_searcher() {
 }
 
 int main(int argc, char* argv[]) {
-    test_hypo_searcher("italy");
-    // test_multi_hypo_searcher();
+    // test_hypo_searcher("italy");
+    test_multi_hypo_searcher();
 }

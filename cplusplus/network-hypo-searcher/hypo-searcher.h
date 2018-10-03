@@ -44,7 +44,7 @@ public:
     void initialize(const std::string& input);
     const std::string& generate_next_hypo();
     bool check_hypo_in_database(IDataBaseRequester& requester);
-    float_type get_probability_to_correct() const;
+    float_type get_probability_not_to_correct() const;
 private:
     void read_first_mistake_statistics(const std::string& first_mistake_file);
     void reset();
@@ -56,7 +56,7 @@ private:
     std::vector<float_type> current_probabilities;
     AutomataNodesSet        nodes_to_process;
     HypoNode                root;
-    float_type              probability_to_correct;
+    float_type              probability_not_to_correct;
 };
 
 } // namespace NNetworkHypoSearcher

@@ -47,7 +47,7 @@ VWModel::VWModel(const std::string& input_folder) {
     num_features = weights.size() / num_labels - 1;
 }
 
-std::vector<std::pair<std::string, float_type>> VWModel::predict(const std::string& message) const {
+VWModel::MapType VWModel::predict(const std::string& message) const {
     // calculate logits
     std::vector<float_type> predictions(num_labels);
     std::vector<size_t> features = create_features(message);
@@ -74,17 +74,9 @@ std::vector<std::pair<std::string, float_type>> VWModel::predict(const std::stri
         value /= sum;
     }
 
-    // sort by logit
-    std::vector<size_t> indexes;
-    for (size_t i = 0; i < predictions.size(); ++i) {
-        indexes.push_back(i);
-    }
-    std::sort(indexes.begin(), indexes.end(), [&predictions](size_t i, size_t j) { return predictions[i] > predictions[j]; });
-
-    // prepare result list
-    std::vector<std::pair<std::string, float_type>> result;
-    for (size_t index : indexes) {
-        result.push_back(std::make_pair(labels[index], predictions[index]));
+    MapType result;
+    for (size_t i = 0; i < num_labels; ++i) {
+        result.insert(std::make_pair(predictions[i], labels[i]));
     }
     return result;
 }

@@ -7,7 +7,7 @@ import utils
 input_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/preprocessed/data')
 output_folder = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/all')
 output_transitions_file = os.path.join(output_folder, 'data')
-output_names_dict_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/names')
+output_names_dict_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/all/names')
 by_country_folder = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/by-country')
 
 # Functions to create names_dict and transitions_dict
@@ -187,9 +187,29 @@ def create_ngrams():
 
 def create_names_symlinks():
     for country in os.listdir(by_country_folder):
-        os.symlink(output_names_dict_file, os.path.join(by_country_folder, country + "/names"))
+        output_link = os.path.join(by_country_folder, country + "/names")
+        os.remove(output_link)
+        os.symlink(output_names_dict_file, output_link)
+
+def create_common_ngrams_file():
+    ngrams = {}
+    for country in os.listdir(by_country_folder):
+        ngrams_file = os.path.join(by_country_folder, country + "/ngrams")
+        with open(ngrams_file) as reader:
+            for line in reader:
+                key = '|'.join(line.split('|')[:-1])
+                value = int(line.split('|')[-1])
+                if key in ngrams:
+                    ngrams[key] += value
+                else:
+                    ngrams[key] = value
+    ngrams = sorted(ngrams.items())
+    with open(os.path.join(output_folder, 'ngrams'), 'w') as writer:
+        for key, value in ngrams:
+            writer.write('{}|{}\n'.format(key, value))
 
 if __name__ == '__main__':
+    """
     print 'step 0: creating {} from {}'.format(input_file, output_folder)
     create_all_dataset_folder()
     print 'step 1: separate {} to {}'.format(output_folder, by_country_folder)
@@ -198,3 +218,6 @@ if __name__ == '__main__':
     create_ngrams()
     print 'step3: creating symlinks for names'
     create_names_symlinks()
+    """
+    print 'step4: creating common ngrams file'
+    create_common_ngrams_file()

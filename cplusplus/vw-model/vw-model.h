@@ -1,3 +1,5 @@
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -7,8 +9,9 @@ using float_type = float;
 
 class VWModel {
 public:
+    using MapType = std::multimap<float_type, std::string, std::greater<float_type>>;
     VWModel(const std::string& input_folder);
-    std::vector<std::pair<std::string, float_type>> predict(const std::string& message) const;
+    MapType predict(const std::string& message) const;
     const std::string& label(size_t index) const { return labels[index]; }
 private:
     std::vector<float_type> weights;

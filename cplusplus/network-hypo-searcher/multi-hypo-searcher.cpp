@@ -1,10 +1,20 @@
 #include "multi-hypo-searcher.h"
 
 #include <fstream>
+#include <map>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unordered_set>
 
 #include <boost/make_unique.hpp>
+
+// 1. TODO: implement states in hypo-searcher:
+// ConsumedQuery <---> ReadyForNewQuery
+// LoadedData <---> UnloadedData
+// 2. TODO: next action must be generated on the fly
+// 3. TODO: why it can't find oosterdokstraat ???
+// 4. TODO: refactor vw-model and move it inside this project (not sure)
+// 5. TODO: train VW model with typos
 
 namespace NNetworkHypoSearcher {
 
@@ -21,6 +31,8 @@ int directory_exists(const std::string& folder) {
     }
 }
 
+const float_type PROBABILITY_TO_MAKE_MISTAKE = 0.2;
+
 } // anonymous namespace
 
 MultiHypoSearcher::MultiHypoSearcher(const std::string& typos_corrector_folder,
@@ -35,19 +47,39 @@ MultiHypoSearcher::MultiHypoSearcher(const std::string& typos_corrector_folder,
     }
 }
 
-void MultiHypoSearcher::initialize(const std::string& input, size_t /* num_attempts */) {
-    this->initial_query = input;
-    commands = {
-        { CommandType::Initialize,          ""                },
-        { CommandType::SearchUncorrected,   "the netherlands" },
-        { CommandType::InitializeCorrector, "the netherlands" },
-        { CommandType::SearchCorrected,     "the netherlands" },
-        { CommandType::SearchCorrected,     "the netherlands" },
-        { CommandType::SearchUncorrected,   "united kingdom"  },
-        { CommandType::InitializeCorrector, "united kingdom"  },
-        { CommandType::SearchCorrected,     "united kingdom"  },
-        { CommandType::SearchCorrected,     "united kingdom"  }
-    };
+void MultiHypoSearcher::initialize(const std::string& initial_query, size_t num_attempts) {
+    this->initial_query = initial_query;
+    commands = {{ CommandType::Initialize, "" }};
+    NVWModel::VWModel::MapType predictions = vw_model.predict(initial_query);
+    for (auto iter = predictions.begin(); iter != predictions.end();) {
+        if (country_to_searcher.find(iter->second) == country_to_searcher.end()) {
+            iter = predictions.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+    std::unordered_set<std::string> processed_countries;
+    std::unordered_set<std::string> initialized_countries;
+    for (size_t i = 0; i < num_attempts; ++i) {
+        auto iter = predictions.begin();
+        const std::string country = iter->second;
+        float_type weight = iter->first;
+        if (processed_countries.find(country) == processed_countries.end()) {
+            commands.emplace_back(Command { CommandType::SearchUncorrected, country });
+            processed_countries.insert(country);
+            predictions.erase(iter);
+            predictions.insert(std::make_pair(weight * PROBABILITY_TO_MAKE_MISTAKE, country));
+            continue;
+        }
+        if (initialized_countries.find(country) == initialized_countries.end()) {
+            commands.emplace_back(Command { CommandType::InitializeCorrector, country });
+            initialized_countries.insert(country);
+        }
+        commands.emplace_back(Command { CommandType::SearchCorrected, country });
+        predictions.erase(iter);
+        predictions.insert(std::make_pair(weight * country_to_searcher[country]->get_probability_not_to_correct(), country));
+        continue;
+    }
     commands_iterator = commands.begin();
 }
 

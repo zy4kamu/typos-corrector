@@ -117,9 +117,12 @@ bool HypoSearcher::check_hypo_in_database(IDataBaseRequester& requester) {
 void HypoSearcher::read_first_mistake_statistics(const std::string& first_mistake_file) {
     std::ifstream reader(first_mistake_file);
     std::string line;
+    float_type unnormalized_sum = 0;
     while (getline(reader, line)) {
         first_mistake_statistics.push_back(static_cast<float_type>(std::stof(line) + 1.0));
+        unnormalized_sum += first_mistake_statistics.back();
     }
+    probability_not_to_correct = 1.0 - first_mistake_statistics.back() / unnormalized_sum;
     for (size_t i = first_mistake_statistics.size() - 1; i + 1 != 0; --i) {
         first_mistake_statistics[i] += first_mistake_statistics[i + 1];
     }
@@ -130,11 +133,10 @@ void HypoSearcher::read_first_mistake_statistics(const std::string& first_mistak
     for (float_type item : first_mistake_statistics) {
         sum += item;
     }
-    probability_to_correct = first_mistake_statistics.back() / sum;
 }
 
-float_type HypoSearcher::get_probability_to_correct() const {
-    return probability_to_correct;
+float_type HypoSearcher::get_probability_not_to_correct() const {
+    return probability_not_to_correct;
 }
 
 } // namespace NNetworkHypoSearcher

@@ -169,11 +169,11 @@ void RandomBatchGenerator::generate_country_dataset(const std::string& output_fi
             size_t number_of_countries = country_to_index.size();
             country_to_index[country] = 1 + number_of_countries;
         }
-        const std::string clean_string = get_clean_string(example, ' ');
-        if (clean_string.length() < 5) {
+        const std::string contaminated = contaminator.contaminate(example, message_size);
+        if (contaminated.length() < 5) {
             continue;
         }
-        std::vector<size_t> features = get_vw_features(clean_string);
+        std::vector<size_t> features = get_vw_features(contaminated);
         writer << country_to_index[country] << " |";
         for (const size_t feature : features) {
             writer << " " << feature;

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo 'creating dataset ...'
-/home/stepan/git-repos/typos-corrector/build/dataset-generator/dataset-generator-app
+$HOME/git-repos/typos-corrector/build/dataset-generator/dataset-generator-app
 
 echo 'training ...'
 vw -d dataset/train --oaa 40      \

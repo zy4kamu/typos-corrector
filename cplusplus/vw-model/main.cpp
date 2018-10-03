@@ -1,10 +1,12 @@
 #include "vw-model.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 
 int main() {
-    NVWModel::VWModel model("/home/stepan/git-repos/typos-corrector/country-dataset/model");
+    const std::string home = getenv("HOME");
+    NVWModel::VWModel model(home + "/git-repos/typos-corrector/country-dataset/model");
     std::string input;
     while (true) {
         std::cout << "Input something: ";

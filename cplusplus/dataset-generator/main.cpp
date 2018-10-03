@@ -3,6 +3,7 @@
 #include "../network-hypo-searcher/hypo-searcher.h"
 #include "../network-hypo-searcher/i-database-requester.h"
 
+#include <cstdlib>
 #include <iostream>
 
 // SOUTH:  95.64%
@@ -24,7 +25,8 @@ private:
 
 // DOESN'T WORK, BROKEN
 void check_accuracy() {
-    const std::string input_folder = "/home/stepan/git-repos/typos-corrector/python/model/";
+    const std::string home = getenv("HOME");
+    const std::string input_folder = home + "/git-repos/typos-corrector/python/model/";
     DataSet dataset(input_folder + "dataset/slavic");
     Contaminator contaminator(input_folder + "ngrams", 0.2);
     RandomBatchGenerator batch_generator(dataset, contaminator, MESSAGE_SIZE);
@@ -51,10 +53,11 @@ void check_accuracy() {
 
 void generate_country_dataset() {
     std::mt19937 generator(1);
-    DataSet dataset("/home/stepan/git-repos/typos-corrector/python/model/dataset/north", 0);
-    Contaminator contaminator("/home/stepan/git-repos/typos-corrector/python/model/ngrams", 0.2);
+    const std::string home = getenv("HOME");
+    DataSet dataset(home + "/git-repos/typos-corrector/dataset/all");
+    Contaminator contaminator(home + "/git-repos/typos-corrector/dataset/all/ngrams", 0.2);
     RandomBatchGenerator batch_generator(dataset, contaminator, MESSAGE_SIZE);
-    batch_generator.generate_country_dataset("/home/stepan/git-repos/typos-corrector/country-dataset/dataset/", 1000, 1000);
+    batch_generator.generate_country_dataset(home + "/git-repos/typos-corrector/country-dataset/dataset/", 1000, 1000);
 }
 
 

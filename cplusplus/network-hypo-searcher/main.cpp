@@ -1,6 +1,7 @@
 #include "multi-hypo-searcher.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 
@@ -9,7 +10,8 @@ using namespace NNetworkHypoSearcher;
 namespace {
 
 const size_t MAX_PASS = 20;
-const std::string INPUT_FOLDER = "/home/stepan/git-repos/typos-corrector/";
+const std::string home = getenv("HOME");
+const std::string INPUT_FOLDER = home + "/git-repos/typos-corrector/";
 
 struct DataSetRequester : private DataSet, public IDataBaseRequester {
     DataSetRequester(const std::string& input_folder): DataSet(input_folder, std::string::npos, false) {
@@ -61,14 +63,14 @@ void test_hypo_searcher(const std::string& country) {
 
 void test_multi_hypo_searcher() {
     auto start = std::chrono::steady_clock::now();
-    DataSetRequester requester(INPUT_FOLDER + "dataset/");
+    DataSetRequester requester(INPUT_FOLDER + "dataset/all/");
     auto end = std::chrono::steady_clock::now();
     std::cout << "downloaded dataset in " << elapsed_time(start, end) << " seconds" << std::endl;
 
     start = std::chrono::steady_clock::now();
     MultiHypoSearcher searcher(INPUT_FOLDER + "python/models/binaries/",
                                { "the netherlands", "united kingdom", "italy" },
-                               "/home/stepan/git-repos/typos-corrector/country-dataset/model");
+                               home + "/git-repos/typos-corrector/country-dataset/model");
     end = std::chrono::steady_clock::now();
     std::cout << "downloaded model in " << elapsed_time(start, end) << " seconds" << std::endl;
 

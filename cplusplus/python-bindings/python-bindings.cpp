@@ -9,7 +9,7 @@
 #include "../dataset/dataset.h"
 #include "../dataset-generator/contaminator.h"
 #include "../dataset-generator/random-batch-generator.h"
-#include "../utils/utils.h"
+#include "../network-hypo-searcher/utils.h"
 
 extern "C" {
 

@@ -5,7 +5,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "../utils/utils.h"
+#include "../network-hypo-searcher/utils.h"
 
 namespace {
 

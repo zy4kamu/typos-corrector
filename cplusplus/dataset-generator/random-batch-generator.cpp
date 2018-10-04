@@ -1,6 +1,6 @@
 #include "random-batch-generator.h"
 
-#include "../utils/utils.h"
+#include "../network-hypo-searcher/utils.h"
 
 #include <algorithm>
 #include <fstream>

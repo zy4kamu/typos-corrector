@@ -1,5 +1,5 @@
 #include "ngrams.h"
-#include "../utils/utils.h"
+#include "../network-hypo-searcher/utils.h"
 
 #include <cassert>
 #include <fstream>

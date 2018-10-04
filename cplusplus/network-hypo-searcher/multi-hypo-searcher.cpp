@@ -8,13 +8,10 @@
 
 #include <boost/make_unique.hpp>
 
-// 1. TODO: implement states in hypo-searcher:
-// ConsumedQuery <---> ReadyForNewQuery
-// LoadedData <---> UnloadedData
-// 2. TODO: next action must be generated on the fly
-// 3. TODO: why it can't find oosterdokstraat ???
-// 4. TODO: refactor vw-model and move it inside this project (not sure)
-// 5. TODO: train VW model with typos
+// 1. TODO: next action must be generated on the fly
+// 2. TODO: why it can't find oosterdokstraat ???
+// 3. TODO: refactor vw-model and move it inside this project (not sure)
+// 4. TODO: train VW model with typos
 
 namespace NNetworkHypoSearcher {
 

@@ -1,5 +1,5 @@
 #include "network-automata-cpu.h"
-#include "../utils/utils.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <cassert>

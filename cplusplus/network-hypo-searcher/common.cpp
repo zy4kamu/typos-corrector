@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../utils/utils.h"
+#include "../network-hypo-searcher/utils.h"
 
 namespace NNetworkHypoSearcher {
 

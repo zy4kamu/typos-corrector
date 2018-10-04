@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <fstream>
-#include "../utils/utils.h"
+#include "utils.h"
 
 namespace NNetworkHypoSearcher {
 

@@ -8,7 +8,7 @@
 
 #include "hypo-searcher.h"
 #include "multi-hypo-searcher.h"
-#include "../vw-model/vw-model.h"
+#include "vw-model.h"
 
 namespace NNetworkHypoSearcher {
 

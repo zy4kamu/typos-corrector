@@ -19,8 +19,9 @@ if (USE_OPENCL)
                                              i-database-requester.cpp
                                              hypo-searcher.cpp
                                              multi-hypo-searcher.cpp
-                                             network-automata-gpu.cpp)
-    target_link_libraries(network-hypo-searcher dataset opencl-connector utils vw-model)
+                                             network-automata-gpu.cpp
+                                             vw-model.cpp)
+    target_link_libraries(network-hypo-searcher opencl-connector)
     add_executable(network-hypo-searcher-app main.cpp)
     target_link_libraries(network-hypo-searcher-app network-hypo-searcher)
 else()
@@ -29,8 +30,10 @@ else()
                                              i-database-requester.cpp
                                              hypo-searcher.cpp
                                              multi-hypo-searcher.cpp
-                                             network-automata-cpu.cpp)
-    target_link_libraries(network-hypo-searcher dataset utils vw-model)
+                                             network-automata-cpu.cpp
+                                             utils.cpp
+                                             vw-model.cpp)
+    target_link_libraries(network-hypo-searcher)
     add_executable(network-hypo-searcher-app main.cpp)
-    target_link_libraries(network-hypo-searcher-app network-hypo-searcher)
+    target_link_libraries(network-hypo-searcher-app network-hypo-searcher dataset)
 endif()

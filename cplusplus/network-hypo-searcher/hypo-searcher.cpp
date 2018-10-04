@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "../utils/utils.h"
+#include "utils.h"
 
 namespace NNetworkHypoSearcher {
 

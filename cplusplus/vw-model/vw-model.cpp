@@ -47,7 +47,7 @@ VWModel::VWModel(const std::string& input_folder) {
     num_features = weights.size() / num_labels - 1;
 }
 
-VWModel::MapType VWModel::predict(const std::string& message) const {
+VWModel::MapType VWModel::predict(const std::string& message, const std::unordered_map<std::string, size_t>& label_to_index) const {
     // calculate logits
     std::vector<float_type> predictions(num_labels);
     std::vector<size_t> features = create_features(message);
@@ -76,7 +76,10 @@ VWModel::MapType VWModel::predict(const std::string& message) const {
 
     MapType result;
     for (size_t i = 0; i < num_labels; ++i) {
-        result.insert(std::make_pair(predictions[i], labels[i]));
+        auto found = label_to_index.find(labels[i]);
+        if (found != label_to_index.end()) {
+            result.insert(std::make_pair(predictions[i], found->second));
+        }
     }
     return result;
 }

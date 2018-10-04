@@ -21,7 +21,7 @@ enum class CommandType {
 
 struct Command {
     CommandType type;
-    std::string country;
+    size_t country_index;
 };
 
 class MultiHypoSearcher {
@@ -34,13 +34,17 @@ public:
     bool check(IDataBaseRequester& requester);
 private:
     NVWModel::VWModel vw_model;
-    std::unordered_map<std::string, std::unique_ptr<HypoSearcher>> country_to_searcher;
+    std::unordered_map<size_t, std::unique_ptr<HypoSearcher>> country_to_searcher;
     std::vector<Command> commands;
     std::vector<Command>::const_iterator commands_iterator;
 
     std::string initial_query;
     std::string current_query;
-    std::string current_country;
+    HypoSearcher* current_hypo_searcher;
+
+    std::vector<std::string> countries;
+    std::unordered_map<std::string, size_t> country_to_index;
+    size_t current_country_index;
 };
 
 } // namespace NNetworkHypoSearcher

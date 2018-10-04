@@ -38,46 +38,41 @@ const float_type PROBABILITY_TO_MAKE_MISTAKE = 0.2;
 MultiHypoSearcher::MultiHypoSearcher(const std::string& typos_corrector_folder,
                                      const std::vector<std::string>& countries,
                                      const std::string& vw_model_file):
-    vw_model(vw_model_file) {
+    vw_model(vw_model_file), current_hypo_searcher(nullptr), countries(countries), current_country_index(std::string::npos) {
     for (const std::string& country : countries) {
+        size_t country_index = country_to_index.size();
+        country_to_index[country] = country_index;
         const std::string lstm_folder = typos_corrector_folder + "/" + country;
         if (directory_exists(lstm_folder)) {
-            country_to_searcher[country] = boost::make_unique<HypoSearcher>(lstm_folder);
+            country_to_searcher[country_index] = boost::make_unique<HypoSearcher>(lstm_folder);
         }
     }
 }
 
 void MultiHypoSearcher::initialize(const std::string& initial_query, size_t num_attempts) {
     this->initial_query = initial_query;
-    commands = {{ CommandType::Initialize, "" }};
-    NVWModel::VWModel::MapType predictions = vw_model.predict(initial_query);
-    for (auto iter = predictions.begin(); iter != predictions.end();) {
-        if (country_to_searcher.find(iter->second) == country_to_searcher.end()) {
-            iter = predictions.erase(iter);
-        } else {
-            ++iter;
-        }
-    }
-    std::unordered_set<std::string> processed_countries;
-    std::unordered_set<std::string> initialized_countries;
+    commands = {{ CommandType::Initialize, std::string::npos }};
+    NVWModel::VWModel::MapType predictions = vw_model.predict(initial_query, country_to_index);
+    std::unordered_set<size_t> processed_countries;
+    std::unordered_set<size_t> initialized_countries;
     for (size_t i = 0; i < num_attempts; ++i) {
         auto iter = predictions.begin();
-        const std::string country = iter->second;
+        const size_t country_index = iter->second;
         float_type weight = iter->first;
-        if (processed_countries.find(country) == processed_countries.end()) {
-            commands.emplace_back(Command { CommandType::SearchUncorrected, country });
-            processed_countries.insert(country);
+        if (processed_countries.find(country_index) == processed_countries.end()) {
+            commands.emplace_back(Command { CommandType::SearchUncorrected, country_index });
+            processed_countries.insert(country_index);
             predictions.erase(iter);
-            predictions.insert(std::make_pair(weight * PROBABILITY_TO_MAKE_MISTAKE, country));
+            predictions.insert(std::make_pair(weight * PROBABILITY_TO_MAKE_MISTAKE, country_index));
             continue;
         }
-        if (initialized_countries.find(country) == initialized_countries.end()) {
-            commands.emplace_back(Command { CommandType::InitializeCorrector, country });
-            initialized_countries.insert(country);
+        if (initialized_countries.find(country_index) == initialized_countries.end()) {
+            commands.emplace_back(Command { CommandType::InitializeCorrector, country_index });
+            initialized_countries.insert(country_index);
         }
-        commands.emplace_back(Command { CommandType::SearchCorrected, country });
+        commands.emplace_back(Command { CommandType::SearchCorrected, country_index });
         predictions.erase(iter);
-        predictions.insert(std::make_pair(weight * country_to_searcher[country]->get_probability_not_to_correct(), country));
+        predictions.insert(std::make_pair(weight * country_to_searcher[country_index]->get_probability_not_to_correct(), country_index));
         continue;
     }
     commands_iterator = commands.begin();
@@ -86,7 +81,8 @@ void MultiHypoSearcher::initialize(const std::string& initial_query, size_t num_
 bool MultiHypoSearcher::next(std::string& country, std::string& hypo) {
     while (commands_iterator != commands.end()) {
         ++commands_iterator;
-        country = commands_iterator->country;
+        size_t country_index = commands_iterator->country_index;
+        country = countries[country_index];
         CommandType type = commands_iterator->type;
         switch (type) {
             case CommandType::Initialize:
@@ -95,15 +91,16 @@ bool MultiHypoSearcher::next(std::string& country, std::string& hypo) {
                 current_query = hypo = initial_query;
                 return true;
             case CommandType::InitializeCorrector:
-                if (!current_country.empty() && country != current_country) {
-                    country_to_searcher[current_country]->unload();
+                if (current_hypo_searcher != nullptr && country_index != current_country_index) {
+                    current_hypo_searcher->unload();
                 }
-                current_country = country;
-                country_to_searcher[country]->load();
-                country_to_searcher[country]->initialize(initial_query);
+                current_country_index = country_index;
+                current_hypo_searcher = country_to_searcher[country_index].get();
+                current_hypo_searcher->load();
+                current_hypo_searcher->initialize(initial_query);
             break;
             case CommandType::SearchCorrected:
-                current_query = hypo = country_to_searcher[country]->generate_next_hypo();
+                current_query = hypo = country_to_searcher[country_index]->generate_next_hypo();
                 return true;
         }
     }
@@ -113,7 +110,7 @@ bool MultiHypoSearcher::next(std::string& country, std::string& hypo) {
 bool MultiHypoSearcher::check(IDataBaseRequester& requester) {
     switch(commands_iterator->type) {
     case CommandType::SearchCorrected:
-        return country_to_searcher[commands_iterator->country]->check_hypo_in_database(requester);
+        return current_hypo_searcher->check_hypo_in_database(requester);
     default:
         return requester.find_max_prefix_full_query(current_query) == current_query.length();
     }

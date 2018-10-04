@@ -5,6 +5,8 @@
 #include <iostream>
 
 int main() {
+    // Broken: doesn't work
+    /*
     const std::string home = getenv("HOME");
     NVWModel::VWModel model(home + "/git-repos/typos-corrector/country-dataset/model");
     std::string input;
@@ -17,4 +19,5 @@ int main() {
         }
         std::cout << "\n" << std::endl;
     }
+    */
 }

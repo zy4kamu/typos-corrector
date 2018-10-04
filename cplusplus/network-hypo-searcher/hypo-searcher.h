@@ -41,6 +41,9 @@ using AutomataNodesSet = std::set<HypoNode*, HypoNodePointerComparator>;
 class HypoSearcher {
 public:
     HypoSearcher(const std::string& lstm_folder);
+    void load();
+    void unload();
+    bool is_loaded() const;
     void initialize(const std::string& input);
     const std::string& generate_next_hypo();
     bool check_hypo_in_database(IDataBaseRequester& requester);
@@ -49,6 +52,7 @@ private:
     void read_first_mistake_statistics(const std::string& first_mistake_file);
     void reset();
 
+    std::string             lstm_folder;
     NetworkAutomata         automata;
     std::vector<float_type> first_mistake_statistics;
     size_t                  max_prefix_length;

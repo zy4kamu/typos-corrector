@@ -39,10 +39,23 @@ bool HypoNodePointerComparator::operator()(const HypoNode* first, const HypoNode
 }
 
 HypoSearcher::HypoSearcher(const std::string& lstm_folder)
-    : automata(lstm_folder)
+    : lstm_folder(lstm_folder)
+    , automata(lstm_folder)
     , max_prefix_length(std::string::npos)
     , current_probabilities(NUM_LETTERS) {
     read_first_mistake_statistics(lstm_folder + "/first-mistake-statistics");
+}
+
+void HypoSearcher::load() {
+    automata.load();
+}
+
+void HypoSearcher::unload() {
+    automata.unload();
+}
+
+bool HypoSearcher::is_loaded() const {
+    return automata.is_loaded();
 }
 
 void HypoSearcher::reset() {
@@ -69,7 +82,7 @@ const std::string& HypoSearcher::generate_next_hypo() {
     max_prefix_length = std::string::npos;
 
     // Take the best hypo and get to the state from where we can start searching hypos
-    automata.reset();
+    automata.reset_pass();
     HypoNode* current_node = *nodes_to_process.begin();
     for (const char letter : current_node->prefix) {
         automata.apply(letter, current_probabilities);

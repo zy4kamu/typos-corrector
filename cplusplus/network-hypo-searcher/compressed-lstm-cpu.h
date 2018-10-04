@@ -11,6 +11,9 @@ namespace NNetworkHypoSearcher {
 class CompressedLSTMCellCPU {
 public:
     CompressedLSTMCellCPU(const std::string& input_folder, const std::vector<std::string>& models);
+    void load();
+    void unload();
+    bool is_loaded() const;
     void process(size_t one_hot_index, size_t model_index = 0);
     const float_type* get_output() const { return hidden_buffer; }
     int_type get_input_size() const { return input_size; }
@@ -20,6 +23,11 @@ public:
     void reset_current_hypo_pass();
 private:
     void calculate_ijfo(int_type one_hot_index, size_t model_index);
+
+    // parameters required to load model from the file
+    std::string              input_folder;
+    std::vector<std::string> models;
+    bool is_model_loaded;
 
     // sizes of the model
     int_type                input_size;

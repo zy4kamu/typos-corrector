@@ -20,7 +20,11 @@ float_type hyperbolic_tangent(float_type value) {
 
 } // anonymous namespace
 
-CompressedLSTMCellCPU::CompressedLSTMCellCPU(const std::string& input_folder, const std::vector<std::string>& models) {
+CompressedLSTMCellCPU::CompressedLSTMCellCPU(const std::string& input_folder, const std::vector<std::string>& models):
+    input_folder(input_folder), models(models), is_model_loaded(false) {
+}
+
+void CompressedLSTMCellCPU::load() {
     // read parameters from file
     for (size_t i = 0; i < models.size(); ++i) {
         //  get sizes
@@ -54,6 +58,28 @@ CompressedLSTMCellCPU::CompressedLSTMCellCPU(const std::string& input_folder, co
         right_matrix_buffers.push_back(read_file(model_prefix + "right_matrix"));
         bias_buffers.push_back(read_file(model_prefix + "bias"));
     }
+    is_model_loaded = true;
+}
+
+void CompressedLSTMCellCPU::unload() {
+    if (is_model_loaded) {
+        input_and_hidden_buffer.clear();
+        input_buffer = nullptr;
+        hidden_buffer = nullptr;
+        left_matrix_buffers.clear();
+        intermediate_matrix_buffers.clear();
+        right_matrix_buffers.clear();
+        bias_buffers.clear();
+        state_buffer.clear();
+        ijfo_buffer.clear();
+        stored_state_buffer.clear();
+        stored_hidden_buffer.clear();
+    }
+    is_model_loaded = false;
+}
+
+bool CompressedLSTMCellCPU::is_loaded() const {
+    return is_model_loaded;
 }
 
 void CompressedLSTMCellCPU::process(size_t one_hot_index, size_t model_index) {

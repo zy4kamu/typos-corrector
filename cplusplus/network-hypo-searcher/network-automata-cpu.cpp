@@ -20,6 +20,18 @@ NetworkAutomataCPU::NetworkAutomataCPU(const std::string& input_folder)
     , hidden_layer_bias(read_file(input_folder + "/hidden_layer_bias")) {
 }
 
+void NetworkAutomataCPU::load() {
+    lstm.load();
+}
+
+void NetworkAutomataCPU::unload() {
+    lstm.unload();
+}
+
+bool NetworkAutomataCPU::is_loaded() const {
+    return lstm.is_loaded();
+}
+
 void NetworkAutomataCPU::encode_message(const std::string& message, std::vector<float_type>& first_letter_logits) {
     lstm.make_all_buffers_zero();
     for (size_t i = 0; i < MESSAGE_SIZE; ++i) {
@@ -29,7 +41,7 @@ void NetworkAutomataCPU::encode_message(const std::string& message, std::vector<
     get_output(first_letter_logits);
 }
 
-void NetworkAutomataCPU::reset() {
+void NetworkAutomataCPU::reset_pass() {
     lstm.reset_current_hypo_pass();
 }
 

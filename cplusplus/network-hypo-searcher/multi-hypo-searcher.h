@@ -40,6 +40,7 @@ private:
 
     std::string initial_query;
     std::string current_query;
+    std::string current_country;
 };
 
 } // namespace NNetworkHypoSearcher

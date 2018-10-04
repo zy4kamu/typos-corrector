@@ -37,6 +37,7 @@ void test_hypo_searcher(const std::string& country) {
 
     start = std::chrono::steady_clock::now();
     HypoSearcher searcher(INPUT_FOLDER + "python/models/binaries/" + country);
+    searcher.load();
     end = std::chrono::steady_clock::now();
     std::cout << "downloaded model in " << elapsed_time(start, end) << " seconds" << std::endl;
 
@@ -92,11 +93,11 @@ void test_multi_hypo_searcher() {
             }
         }
         auto end = std::chrono::steady_clock::now();
-        std::cout << "spent " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ...\n" << std::endl;
+        std::cout << "spent " << elapsed_time(start, end) << " seconds ...\n" << std::endl;
     }
 }
 
 int main(int argc, char* argv[]) {
-    // test_hypo_searcher("italy");
+    // test_hypo_searcher("the netherlands");
     test_multi_hypo_searcher();
 }

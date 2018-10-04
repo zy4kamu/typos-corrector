@@ -95,6 +95,11 @@ bool MultiHypoSearcher::next(std::string& country, std::string& hypo) {
                 current_query = hypo = initial_query;
                 return true;
             case CommandType::InitializeCorrector:
+                if (!current_country.empty() && country != current_country) {
+                    country_to_searcher[current_country]->unload();
+                }
+                current_country = country;
+                country_to_searcher[country]->load();
                 country_to_searcher[country]->initialize(initial_query);
             break;
             case CommandType::SearchCorrected:

@@ -4,6 +4,11 @@ src_folder='../cplusplus'
 build_folder='../build'
 application_folder='../application'
 
+pushd $src_folder
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .
+/usr/local/bin/rc -J .
+popd
+
 if [ ! -d $build_folder ]; then
     mkdir $build_folder
 fi

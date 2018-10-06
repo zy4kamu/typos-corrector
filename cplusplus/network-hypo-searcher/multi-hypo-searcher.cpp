@@ -97,19 +97,19 @@ bool MultiHypoSearcher::next(std::string& country, std::string& hypo) {
                 current_hypo_searcher->initialize(initial_query);
             break;
             case CommandType::SearchCorrected:
-                current_query = hypo = country_to_searcher[country_index]->generate_next_hypo();
+                current_query = hypo = current_hypo_searcher->generate_next_hypo();
                 return true;
         }
     }
     return false;
 }
 
-bool MultiHypoSearcher::check(IDataBaseRequester& requester) {
+bool MultiHypoSearcher::check(IDataBaseRequester& requester, std::string& levenstein_correction) {
     switch(commands_iterator->type) {
     case CommandType::SearchCorrected:
-        return current_hypo_searcher->check_hypo_in_database(requester);
+        return current_hypo_searcher->check_hypo_in_database(requester, levenstein_correction);
     default:
-        return requester.find_max_prefix_full_query(current_query) == current_query.length();
+        return requester.find_max_prefix_full_query(current_query, ' ') == current_query.length();
     }
 }
 

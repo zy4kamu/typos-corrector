@@ -31,7 +31,7 @@ public:
                       const std::string& vw_model_file);
     void initialize(const std::string& initial_query, size_t num_attempts);
     bool next(std::string& country, std::string& hypo);
-    bool check(IDataBaseRequester& requester);
+    bool check(IDataBaseRequester& requester, std::string& levenstein_correction);
 private:
     NVWModel::VWModel vw_model;
     std::unordered_map<size_t, std::unique_ptr<HypoSearcher>> country_to_searcher;

@@ -19,11 +19,21 @@ struct DataSetRequester : public NNetworkHypoSearcher::IDataBaseRequester {
     bool is_one_entity_present_in_database(const std::string& token) const override {
         return !dataset.find_by_prefix(token, 1).empty();
     }
+
+    bool find_entities_present_in_database(const std::string& entity, size_t limit, std::vector<std::string>& pretendents) const override {
+        pretendents = dataset.find_by_prefix(entity, limit + 1);
+        if (pretendents.size() > limit) {
+            pretendents.clear();
+            return true;
+        }
+        return !pretendents.empty();
+    }
 private:
     const DataSet& dataset;
 };
 
 // DOESN'T WORK, BROKEN
+/*
 void check_accuracy() {
     const std::string home = getenv("HOME");
     const std::string input_folder = home + "/git-repos/typos-corrector/python/model/";
@@ -50,6 +60,7 @@ void check_accuracy() {
                   << static_cast<double>(num_found) / static_cast<double>(i + 1) << std::endl;
     }
 }
+*/
 
 void generate_country_dataset() {
     std::mt19937 generator(1);

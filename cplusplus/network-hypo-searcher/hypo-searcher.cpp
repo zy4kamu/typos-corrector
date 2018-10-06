@@ -119,12 +119,12 @@ const std::string& HypoSearcher::generate_next_hypo() {
     return current_hypo;
 }
 
-bool HypoSearcher::check_hypo_in_database(IDataBaseRequester& requester) {
-    size_t prefix_length = requester.find_max_prefix_full_query(current_hypo);
+bool HypoSearcher::check_hypo_in_database(IDataBaseRequester& requester, std::string& levenstein_correction) {
+    size_t prefix_length = requester.levenstein_request(current_hypo, 10, 3, '|', levenstein_correction);
     if (max_prefix_length == std::string::npos || prefix_length > max_prefix_length) {
         max_prefix_length = prefix_length;
     }
-    return max_prefix_length == current_hypo.length();
+    return max_prefix_length == current_hypo.length() || !levenstein_correction.empty();
 }
 
 void HypoSearcher::read_first_mistake_statistics(const std::string& first_mistake_file) {

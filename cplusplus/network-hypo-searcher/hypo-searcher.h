@@ -46,7 +46,7 @@ public:
     bool is_loaded() const;
     void initialize(const std::string& input);
     const std::string& generate_next_hypo();
-    bool check_hypo_in_database(IDataBaseRequester& requester);
+    bool check_hypo_in_database(IDataBaseRequester& requester, std::string& levenstein_correction);
     float_type get_probability_not_to_correct() const;
 private:
     void read_first_mistake_statistics(const std::string& first_mistake_file);

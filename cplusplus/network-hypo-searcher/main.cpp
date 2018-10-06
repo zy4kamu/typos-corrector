@@ -20,6 +20,15 @@ struct DataSetRequester : private DataSet, public IDataBaseRequester {
     bool is_one_entity_present_in_database(const std::string& token) const override {
         return !DataSet::find_by_prefix(token, 1).empty();
     }
+
+    bool find_entities_present_in_database(const std::string& entity, size_t limit, std::vector<std::string>& pretendents) const override {
+        pretendents = DataSet::find_by_prefix(entity, limit + 1);
+        if (pretendents.size() > limit) {
+            pretendents.clear();
+            return true;
+        }
+        return !pretendents.empty();
+    }
 };
 
 double elapsed_time(std::chrono::time_point<std::chrono::steady_clock> start,
@@ -51,9 +60,10 @@ void test_hypo_searcher(const std::string& country) {
         for (size_t i = 0; i < 20; ++i) {
             const std::string& hypo = searcher.generate_next_hypo();
             std::cout << hypo << std::endl;
-            bool found_full_match = searcher.check_hypo_in_database(requester);
+            std::string levenstein_correction;
+            bool found_full_match = searcher.check_hypo_in_database(requester, levenstein_correction);
             if (found_full_match) {
-                std::cout << "found :-)" << std::endl;
+                std::cout << "found: " << levenstein_correction << ":-)" << std::endl;
                 break;
             }
         }
@@ -76,7 +86,7 @@ void test_multi_hypo_searcher() {
     std::cout << "downloaded model in " << elapsed_time(start, end) << " seconds" << std::endl;
 
     const size_t num_attempts = 40;
-    std::string input, country, corrected_hypo;
+    std::string input, country, hypo;
     while (true) {
         std::cout << "Input something: ";
         std::getline(std::cin, input);
@@ -84,11 +94,12 @@ void test_multi_hypo_searcher() {
         auto start = std::chrono::steady_clock::now();
         searcher.initialize(input, num_attempts);
         for (size_t i = 0; i < num_attempts; ++i) {
-            searcher.next(country, corrected_hypo);
-            std::cout << country << ": " << corrected_hypo << std::endl;
-            bool found_full_match = searcher.check(requester);
+            searcher.next(country, hypo);
+            std::cout << country << ": " << hypo << std::endl;
+            std::string levenstein_correction;
+            bool found_full_match = searcher.check(requester, levenstein_correction);
             if (found_full_match) {
-                std::cout << "found :-)" << std::endl;
+                std::cout << "found: " << levenstein_correction << ":-)" << std::endl;
                 break;
             }
         }

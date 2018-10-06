@@ -116,6 +116,7 @@ bool MultiHypoSearcher::check(IDataBaseRequester& requester, std::string& levens
     case CommandType::SearchCorrected:
         return current_hypo_searcher->check_hypo_in_database(requester, levenstein_correction);
     default:
+        levenstein_correction = current_query;
         return requester.find_max_prefix_full_query(current_query, ' ') == current_query.length();
     }
 }

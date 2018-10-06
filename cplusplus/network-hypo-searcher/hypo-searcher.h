@@ -62,6 +62,7 @@ private:
     HypoNode                root;
     float_type              probability_not_to_correct;
     std::string             initial_input;
+    size_t                  current_levenstein;
 };
 
 } // namespace NNetworkHypoSearcher

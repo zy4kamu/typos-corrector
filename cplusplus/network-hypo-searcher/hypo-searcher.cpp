@@ -1,6 +1,7 @@
 #include "hypo-searcher.h"
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <fstream>
 #include <sstream>
@@ -65,7 +66,7 @@ void HypoSearcher::reset() {
 }
 
 void HypoSearcher::initialize(const std::string& input) {
-    initial_input = input;
+    initial_input = input.substr(0, std::min(input.length(), MESSAGE_SIZE));
     max_prefix_length = std::string::npos;
     reset();
     automata.encode_message(input, current_probabilities);
@@ -117,12 +118,18 @@ const std::string& HypoSearcher::generate_next_hypo() {
 
     // check if hypo is present in the dictionary
     current_hypo.erase(current_hypo.find_last_not_of(' ') + 1);
+
+    // calculate current levenstein between hypo and initial request
+    std::string temp_hypo = current_hypo;
+    boost::replace_all(temp_hypo, "|", " ");
+    current_levenstein = levenstein_distance(initial_input, temp_hypo);
+
     return current_hypo;
 }
 
 bool HypoSearcher::check_hypo_in_database(IDataBaseRequester& requester, std::string& levenstein_correction) {
-    int current_levenstein = static_cast<int>(levenstein_distance(initial_input, current_hypo));
-    size_t prefix_length = requester.levenstein_request(current_hypo, 10, static_cast<size_t>(std::max(0, 3 - current_levenstein)),
+    size_t prefix_length = requester.levenstein_request(current_hypo, 10,
+                                                        static_cast<size_t>(std::max(0, 4 - static_cast<int>(current_levenstein))),
                                                         '|', levenstein_correction);
     if (max_prefix_length == std::string::npos || prefix_length > max_prefix_length) {
         max_prefix_length = prefix_length;

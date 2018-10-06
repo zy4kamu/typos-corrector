@@ -110,10 +110,10 @@ size_t IDataBaseRequester::levenstein_request(const std::string& query, size_t r
             calculate_prefix = one_token_max_prefix_length == current_entity.length();
         }
 
-        // if there is a full prefix match just exist: everything is already fine
-        if (reader.tellg() == -1 && calculate_prefix) {
-            corrected_query = query;
-            break;
+        // if there is prefix match no need in levenstein
+        if (calculate_prefix) {
+            append(corrected_query, current_entity, separator);
+            continue;
         }
 
         // if there is a full prefix match after some levenstein corrections: append entity and continue

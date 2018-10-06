@@ -99,7 +99,7 @@ void test_multi_hypo_searcher() {
             std::string levenstein_correction;
             bool found_full_match = searcher.check(requester, levenstein_correction);
             if (found_full_match) {
-                std::cout << "found: " << levenstein_correction << ":-)" << std::endl;
+                std::cout << "found: \033[1;31m" << levenstein_correction << "\033[0m in \033[1;31m" << country << "\033[0m :-)\n";
                 break;
             }
         }

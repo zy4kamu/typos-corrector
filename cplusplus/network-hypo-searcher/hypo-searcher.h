@@ -61,6 +61,7 @@ private:
     AutomataNodesSet        nodes_to_process;
     HypoNode                root;
     float_type              probability_not_to_correct;
+    std::string             initial_input;
 };
 
 } // namespace NNetworkHypoSearcher

@@ -65,6 +65,7 @@ void HypoSearcher::reset() {
 }
 
 void HypoSearcher::initialize(const std::string& input) {
+    initial_input = input;
     max_prefix_length = std::string::npos;
     reset();
     automata.encode_message(input, current_probabilities);
@@ -120,7 +121,9 @@ const std::string& HypoSearcher::generate_next_hypo() {
 }
 
 bool HypoSearcher::check_hypo_in_database(IDataBaseRequester& requester, std::string& levenstein_correction) {
-    size_t prefix_length = requester.levenstein_request(current_hypo, 10, 3, '|', levenstein_correction);
+    int current_levenstein = static_cast<int>(levenstein_distance(initial_input, current_hypo));
+    size_t prefix_length = requester.levenstein_request(current_hypo, 10, static_cast<size_t>(std::max(0, 3 - current_levenstein)),
+                                                        '|', levenstein_correction);
     if (max_prefix_length == std::string::npos || prefix_length > max_prefix_length) {
         max_prefix_length = prefix_length;
     }

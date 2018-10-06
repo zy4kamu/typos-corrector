@@ -45,8 +45,8 @@ void CompressedLSTMCellCPU::load() {
             hidden_buffer = input_and_hidden_buffer.data() + input_size;
             state_buffer.resize(lstm_size, 0);
             ijfo_buffer.resize(4 * lstm_size, 0);
-            stored_state_buffer.resize(lstm_size, 0);
-            stored_hidden_buffer.resize(lstm_size, 0);
+            stored_state_buffer.resize(lstm_size);
+            stored_hidden_buffer.resize(lstm_size);
         } else {
             assert(lstm_size == local_lstm_size);
             assert(compressor_size == local_compressor_size);
@@ -72,8 +72,7 @@ void CompressedLSTMCellCPU::unload() {
         bias_buffers.clear();
         state_buffer.clear();
         ijfo_buffer.clear();
-        stored_state_buffer.clear();
-        stored_hidden_buffer.clear();
+        // intentionally do not clear stored_state_buffer and stored_hidden_buffer: it will accelerate next pass twice
     }
     is_model_loaded = false;
 }
@@ -126,7 +125,7 @@ void CompressedLSTMCellCPU::store_current_hypo_pass() {
     memcpy(stored_hidden_buffer.data(), hidden_buffer, lstm_size * sizeof(float_type));
 }
 
-void CompressedLSTMCellCPU::reset_current_hypo_pass() {
+void CompressedLSTMCellCPU::restore_current_hypo_pass() {
     memcpy(state_buffer.data(), stored_state_buffer.data(), lstm_size * sizeof(float_type));
     memcpy(hidden_buffer, stored_hidden_buffer.data(), lstm_size * sizeof(float_type));
 }

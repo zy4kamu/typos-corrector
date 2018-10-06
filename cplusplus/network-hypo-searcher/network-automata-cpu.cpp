@@ -15,17 +15,19 @@ namespace {
 } // anonymous namespace
 
 NetworkAutomataCPU::NetworkAutomataCPU(const std::string& input_folder)
-    : lstm(input_folder, { "encode_lstm_", "decode_lstm_" })
-    , hidden_layer_weights(read_file(input_folder + "/hidden_layer_weights"))
-    , hidden_layer_bias(read_file(input_folder + "/hidden_layer_bias")) {
+    : input_folder(input_folder), lstm(input_folder, { "encode_lstm_", "decode_lstm_" }) {
 }
 
 void NetworkAutomataCPU::load() {
     lstm.load();
+    hidden_layer_weights = read_file(input_folder + "/hidden_layer_weights");
+    hidden_layer_bias = read_file(input_folder + "/hidden_layer_bias");
 }
 
 void NetworkAutomataCPU::unload() {
     lstm.unload();
+    hidden_layer_weights.clear();
+    hidden_layer_bias.clear();
 }
 
 bool NetworkAutomataCPU::is_loaded() const {
@@ -42,7 +44,7 @@ void NetworkAutomataCPU::encode_message(const std::string& message, std::vector<
 }
 
 void NetworkAutomataCPU::reset_pass() {
-    lstm.reset_current_hypo_pass();
+    lstm.restore_current_hypo_pass();
 }
 
 void NetworkAutomataCPU::apply(char letter, std::vector<float_type>& next_letter_logits) {

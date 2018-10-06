@@ -20,7 +20,7 @@ public:
     int_type get_output_size() const { return lstm_size; }
     void make_all_buffers_zero();
     void store_current_hypo_pass();
-    void reset_current_hypo_pass();
+    void restore_current_hypo_pass();
 private:
     void calculate_ijfo(int_type one_hot_index, size_t model_index);
 

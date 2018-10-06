@@ -97,6 +97,13 @@ bool MultiHypoSearcher::next(std::string& country, std::string& hypo) {
                 current_hypo_searcher->initialize(initial_query);
             break;
             case CommandType::SearchCorrected:
+                if (country_index != current_country_index) {
+                    current_hypo_searcher->unload();
+                    current_country_index = country_index;
+                    current_hypo_searcher = country_to_searcher[country_index].get();
+                    current_hypo_searcher->load();
+                    // NOTE: hypo searcher must be initialized already
+                }
                 current_query = hypo = current_hypo_searcher->generate_next_hypo();
                 return true;
         }

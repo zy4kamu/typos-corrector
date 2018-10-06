@@ -19,6 +19,7 @@ public:
 private:
     void get_output(std::vector<float_type>& output);
 
+    std::string             input_folder;
     CompressedLSTMCellCPU   lstm;
     std::vector<float_type> hidden_layer_weights;
     std::vector<float_type> hidden_layer_bias;

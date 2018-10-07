@@ -4,17 +4,13 @@ src_folder='../cplusplus'
 build_folder='../build'
 application_folder='../application'
 
-pushd $src_folder
-cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .
-/usr/local/bin/rc -J .
-popd
-
 if [ ! -d $build_folder ]; then
     mkdir $build_folder
 fi
 
 pushd $build_folder
-cmake $src_folder -DCMAKE_BUILD_TYPE=RELEASE -DUSE_OPENCL=OFF
+cmake $src_folder -DCMAKE_BUILD_TYPE=RELEASE -DUSE_OPENCL=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=1
+rc -J .
 make
 popd
 

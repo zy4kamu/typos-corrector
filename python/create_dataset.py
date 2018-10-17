@@ -188,7 +188,8 @@ def create_ngrams():
 def create_names_symlinks():
     for country in os.listdir(by_country_folder):
         output_link = os.path.join(by_country_folder, country + "/names")
-        os.remove(output_link)
+        if os.path.exists(output_link):
+            os.remove(output_link)
         os.symlink(output_names_dict_file, output_link)
 
 def create_common_ngrams_file():
@@ -216,8 +217,8 @@ if __name__ == '__main__':
     separate_by_country()
     print 'step 2: creating ngrams'
     create_ngrams()
+    """
     print 'step3: creating symlinks for names'
     create_names_symlinks()
-    """
     print 'step4: creating common ngrams file'
     create_common_ngrams_file()

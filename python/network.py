@@ -121,12 +121,16 @@ class Network(object):
                     with open('models/binaries/{}/first-mistake-statistics'.format(ARGS.country), 'w') as writer:
                         writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
 
-                print 'test: {} correct of {}; accuracy = {}'.format(test_num_correct, test_num_letters,
-                                                                     float(test_num_correct) / float(test_num_letters))
+                accuracy = 100.0 * float(test_num_correct) / float(test_num_letters)
+                print 'test: {} correct of {}; accuracy = {}%'.format(test_num_correct, test_num_letters, accuracy)
                 print 'dummy: {} correct of {}; accuracy = {}'.format(dummy_num_correct, test_num_letters,
                                                                       float(dummy_num_correct) / float(test_num_letters))
                 print 'levenstein: {}'.format(float(sum_levenstein) / float(ARGS.test_batch_size))
                 print ''
+
+                if accuracy > ARGS.stop_accuracy:
+                    print 'Reached target accuracy {}; exit'.format(ARGS.stop_accuracy)
+                    exit(0)
 
             # update gradient
             clean, contaminated = cpp_bindings.generate_random_batch(ARGS.batch_size)
@@ -195,7 +199,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
                         choices=['train', 'continue'])
-    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='switzerland'),
+    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='spain'),
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
@@ -203,6 +207,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--lstm-size',           type=int,   help='LSTM cell size',                default=512)
     parser.add_argument('-t', '--test-batch-size',     type=int,   help='test batch size',               default=10000)
     parser.add_argument('-n', '--test-num-iterations', type=int,   help='test number of iterations',     default=2500)
+    parser.add_argument('-a', '--stop-accuracy',       type=float, help='stop when reach this accuracy', default=98.97)
     ARGS = parser.parse_args()
 
     generate_cpp_bindings()

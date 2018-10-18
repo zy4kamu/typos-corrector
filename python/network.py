@@ -67,15 +67,19 @@ class Network(object):
             initializer = tf.global_variables_initializer()
             self.sess.run(initializer)
             counter = 0
+        max_accuracy = 0
+        test_accuracy = 0
         while True:
             # make intermediate report
             if counter == ARGS.test_num_iterations:
-                # print current model
                 print '\r',
-                saver.save(self.sess, model_file)
 
-                # print parameters in numpy format
-                self.save_parameters_to_file()
+                # print current model
+                should_save_model = test_accuracy > max_accuracy
+                if should_save_model:
+                    max_accuracy = test_accuracy
+                    saver.save(self.sess, model_file)
+                    self.save_parameters_to_file()
 
                 # print statistics on train
                 print '\ntrain: {} correct of {}; accuracy = {}'.format(train_num_correct, train_num_letters,
@@ -108,27 +112,29 @@ class Network(object):
                     sum_levenstein += cpp_bindings.levenstein(predicted_token, true_token)
 
                 # create first mistake statistics file
-                first_mistake_statistics = [0] * (ARGS.message_size + 1)
-                for i in range(ARGS.test_batch_size):
-                    predicted_token = utils.numpy_to_string(all_predicted[i, :])
-                    true_token = utils.numpy_to_string(clean_test_batch[i, :])
-                    for i in range(ARGS.message_size):
-                        if predicted_token[i] != true_token[i]:
-                            first_mistake_statistics[i] += 1
-                            break
-                        if i + 1 == ARGS.message_size:
-                            first_mistake_statistics[-1] += 1
-                    with open('models/binaries/{}/first-mistake-statistics'.format(ARGS.country), 'w') as writer:
-                        writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
+                if should_save_model:
+                    first_mistake_statistics = [0] * (ARGS.message_size + 1)
+                    for i in range(ARGS.test_batch_size):
+                        predicted_token = utils.numpy_to_string(all_predicted[i, :])
+                        true_token = utils.numpy_to_string(clean_test_batch[i, :])
+                        for i in range(ARGS.message_size):
+                            if predicted_token[i] != true_token[i]:
+                                first_mistake_statistics[i] += 1
+                                break
+                            if i + 1 == ARGS.message_size:
+                                first_mistake_statistics[-1] += 1
+                        with open('models/binaries/{}/first-mistake-statistics'.format(ARGS.country), 'w') as writer:
+                            writer.write('\n'.join([str(_) for _ in first_mistake_statistics]))
 
-                accuracy = 100.0 * float(test_num_correct) / float(test_num_letters)
-                print 'test: {} correct of {}; accuracy = {}%'.format(test_num_correct, test_num_letters, accuracy)
+                test_accuracy = 100.0 * float(test_num_correct) / float(test_num_letters)
+                print 'test: {} correct of {}; accuracy = {}%; max accuracy = {}'.format(test_num_correct, test_num_letters,
+                                                                                         test_accuracy, max_accuracy)
                 print 'dummy: {} correct of {}; accuracy = {}'.format(dummy_num_correct, test_num_letters,
                                                                       float(dummy_num_correct) / float(test_num_letters))
                 print 'levenstein: {}'.format(float(sum_levenstein) / float(ARGS.test_batch_size))
                 print ''
 
-                if accuracy > ARGS.stop_accuracy:
+                if test_accuracy > ARGS.stop_accuracy:
                     print 'Reached target accuracy {}; exit'.format(ARGS.stop_accuracy)
                     exit(0)
 

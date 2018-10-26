@@ -205,7 +205,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
                         choices=['train', 'continue'])
-    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='spain'),
+    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='turkey'),
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)
@@ -213,7 +213,7 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--lstm-size',           type=int,   help='LSTM cell size',                default=512)
     parser.add_argument('-t', '--test-batch-size',     type=int,   help='test batch size',               default=10000)
     parser.add_argument('-n', '--test-num-iterations', type=int,   help='test number of iterations',     default=2500)
-    parser.add_argument('-a', '--stop-accuracy',       type=float, help='stop when reach this accuracy', default=98.97)
+    parser.add_argument('-a', '--stop-accuracy',       type=float, help='stop when reach this accuracy', default=99.97)
     ARGS = parser.parse_args()
 
     generate_cpp_bindings()

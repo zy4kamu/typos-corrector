@@ -58,7 +58,7 @@ class Network(object):
         saver = tf.train.Saver()
         model_folder = 'models/tensorflow-binaries/{}'.format(ARGS.country)
         if not os.path.exists(model_folder):
-            os.mkdir(model_folder)
+            os.makedirs(model_folder)
         model_file = os.path.join(model_folder, 'model')
         if restore_parameters_from_file:
             saver.restore(self.sess, model_file)
@@ -166,7 +166,7 @@ class Network(object):
     def save_parameters_to_file(self):
         output_folder = 'models/binaries/' + ARGS.country
         if not os.path.exists(output_folder):
-            os.mkdir(output_folder)
+            os.makedirs(output_folder)
         for k, v in self.parametes.iteritems():
             [parameter] = self.sess.run([v], feed_dict={})
             parameter.tofile(os.path.join(output_folder, k))
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train neural network for typos correction')
     parser.add_argument('-c', '--command',             type=str,   help='command to process',            required=True,
                         choices=['train', 'continue'])
-    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='turkey'),
+    parser.add_argument('-o', '--country',             type=str,   help='country to process',            default='united states of america/new york'),
     parser.add_argument('-m', '--message-size',        type=int,   help='length of each token in batch', default=25)
     parser.add_argument('-b', '--batch-size',          type=int,   help='number of tokens in batch',     default=1024)
     parser.add_argument('-p', '--mistake-probability', type=float, help='mistake probability',           default=0.2)

@@ -8,7 +8,7 @@ input_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset
 output_folder = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/all')
 output_transitions_file = os.path.join(output_folder, 'data')
 output_names_dict_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/all/names')
-by_country_folder = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/by-country')
+by_country_state_folder = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/by-country')
 
 # Functions to create names_dict and transitions_dict
 
@@ -126,31 +126,40 @@ def create_all_dataset_folder():
     os.system('sort -n {} | uniq > tmp'.format(output_transitions_file))
     os.system('mv tmp {}'.format(output_transitions_file))
 
-def separate_by_country():
-    if os.path.exists(by_country_folder):
-        shutil.rmtree(by_country_folder)
-    os.mkdir(by_country_folder)
+def separate_by_country_state():
+    if os.path.exists(by_country_state_folder):
+        shutil.rmtree(by_country_state_folder)
+    os.mkdir(by_country_state_folder)
 
-    # create index_to_country
-    index_to_country_writer = {}
+    # create index_to_country_state
+    index_to_country_state = {}
     with open(output_names_dict_file) as reader:
         for line in reader:
-            type, index, country = line.strip().split('|')
-            if type != '3': break
-            if not index in index_to_country_writer:
-                country_folder = os.path.join(by_country_folder, country)
-                os.mkdir(country_folder)
-                output_file = os.path.join(country_folder, 'data')
-                index_to_country_writer[index] = open(output_file, 'w')
+            type, index, country_state = line.strip().split('|')
+            if type != '3' and type != '4': break
+            index_to_country_state[index] = (type, country_state)
 
     # iterate over file
+    writers = {}
     with open(output_transitions_file) as reader:
         for line in reader:
-            index = line.split(' ')[0]
-            index_to_country_writer[index].write(line)
+            country = 'none-country'
+            state = 'none-state'
+            for index in line.split(' '):
+                if index in index_to_country_state:
+                    type = index_to_country_state[index][0]
+                    value = index_to_country_state[index][1]
+                    if type == "3": country = value
+                    elif type == "4": state = value
+            writer_name = '{}/{}'.format(country, state)
+            output_folder = os.path.join(by_country_state_folder, writer_name)
+            if not os.path.exists(output_folder):
+                os.makedirs(output_folder)
+                writers[writer_name] = open(os.path.join(output_folder, 'data'), 'w')
+            writers[writer_name].write(line)
 
     # close all writers
-    for writer in index_to_country_writer.values():
+    for writer in writers.values():
         writer.close()
 
 def create_ngrams():
@@ -162,48 +171,58 @@ def create_ngrams():
 
     ngram_size = 3
     spaces = (' ' * ngram_size)
-    for country in os.listdir(by_country_folder):
-        print 'working with', country
-        # create ngrams
-        ngrams = {}
-        with open(os.path.join(by_country_folder, country + '/data')) as reader:
-            for line in reader:
-                splitted = line.strip().split(' ')
-                for index in splitted:
-                    token = names_dict[index]
-                    token = spaces + token.strip() + spaces
-                    for i in range(len(token) - ngram_size):
-                        ngram = token[i:i + ngram_size]
-                        next_char = token[i + ngram_size]
-                        if ngrams.get(ngram) is None:
-                            ngrams[ngram] = {}
-                        chars = ngrams[ngram]
-                        chars[next_char] = chars.get(next_char, 0) + 1
-        # print ngrams
-        with open(os.path.join(by_country_folder, country + '/ngrams'), 'w') as writer:
-            for k1, v1 in ngrams.iteritems():
-                for k2, v2 in v1.iteritems():
-                    writer.write('{}|{}|{}\n'.format(k1, k2, v2))
+    for country in os.listdir(by_country_state_folder):
+        country_folder = os.path.join(by_country_state_folder, country)
+        for state in os.listdir(country_folder):
+            print 'working with', country, state
+            country_state_folder = os.path.join(country_folder, state)
+
+            # create ngrams
+            ngrams = {}
+            with open(os.path.join(country_state_folder, 'data')) as reader:
+                for line in reader:
+                    splitted = line.strip().split(' ')
+                    for index in splitted:
+                        token = names_dict[index]
+                        token = spaces + token.strip() + spaces
+                        for i in range(len(token) - ngram_size):
+                            ngram = token[i:i + ngram_size]
+                            next_char = token[i + ngram_size]
+                            if ngrams.get(ngram) is None:
+                                ngrams[ngram] = {}
+                            chars = ngrams[ngram]
+                            chars[next_char] = chars.get(next_char, 0) + 1
+            # print ngrams
+            with open(os.path.join(country_state_folder, 'ngrams'), 'w') as writer:
+                for k1, v1 in ngrams.iteritems():
+                    for k2, v2 in v1.iteritems():
+                        writer.write('{}|{}|{}\n'.format(k1, k2, v2))
 
 def create_names_symlinks():
-    for country in os.listdir(by_country_folder):
-        output_link = os.path.join(by_country_folder, country + "/names")
-        if os.path.exists(output_link):
-            os.remove(output_link)
-        os.symlink(output_names_dict_file, output_link)
+    for country in os.listdir(by_country_state_folder):
+        country_folder = os.path.join(by_country_state_folder, country)
+        for state in os.listdir(country_folder):
+            country_state_folder = os.path.join(country_folder, state)
+            output_link = os.path.join(country_state_folder, "names")
+            if os.path.exists(output_link):
+                os.remove(output_link)
+            os.symlink(output_names_dict_file, output_link)
 
 def create_common_ngrams_file():
     ngrams = {}
-    for country in os.listdir(by_country_folder):
-        ngrams_file = os.path.join(by_country_folder, country + "/ngrams")
-        with open(ngrams_file) as reader:
-            for line in reader:
-                key = '|'.join(line.split('|')[:-1])
-                value = int(line.split('|')[-1])
-                if key in ngrams:
-                    ngrams[key] += value
-                else:
-                    ngrams[key] = value
+    for country in os.listdir(by_country_state_folder):
+        country_folder = os.path.join(by_country_state_folder, country)
+        for state in os.listdir(country_folder):
+            country_state_folder = os.path.join(country_folder, state)
+            ngrams_file = os.path.join(country_state_folder, "ngrams")
+            with open(ngrams_file) as reader:
+                for line in reader:
+                    key = '|'.join(line.split('|')[:-1])
+                    value = int(line.split('|')[-1])
+                    if key in ngrams:
+                        ngrams[key] += value
+                    else:
+                        ngrams[key] = value
     ngrams = sorted(ngrams.items())
     with open(os.path.join(output_folder, 'ngrams'), 'w') as writer:
         for key, value in ngrams:
@@ -213,12 +232,15 @@ if __name__ == '__main__':
     """
     print 'step 0: creating {} from {}'.format(input_file, output_folder)
     create_all_dataset_folder()
-    print 'step 1: separate {} to {}'.format(output_folder, by_country_folder)
-    separate_by_country()
+    print 'step 1: separate {} to {}'.format(output_folder, by_country_state_folder)
+    separate_by_country_state()
     print 'step 2: creating ngrams'
     create_ngrams()
     """
     print 'step3: creating symlinks for names'
     create_names_symlinks()
+    """
     print 'step4: creating common ngrams file'
     create_common_ngrams_file()
+    """
+

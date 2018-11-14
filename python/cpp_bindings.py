@@ -42,6 +42,17 @@ def levenstein(first_message, second_message):
     return func(ctypes.c_char_p(first_message), ctypes.c_char_p(second_message), ctypes.c_size_t(len(first_message)))
 
 
+def create_prefix_tree_builder():
+    _library.create_prefix_tree_builder()
+
+
+def add_to_prefix_tree_builder(message):
+    _library.add_to_prefix_tree_builder(ctypes.c_char_p(message))
+
+
+def finalize_prefix_tree_builder(output_file):
+    _library.finalize_prefix_tree_builder(ctypes.c_char_p(output_file))
+
 # Helpers
 
 def _reset():
@@ -50,6 +61,7 @@ def _reset():
 
 def _set_dataset_folder(dataset_folder):
     _library.set_dataset_folder(ctypes.c_char_p(dataset_folder))
+
 
 def _create_dataset():
     _library.create_dataset(ctypes.c_size_t(-1))
@@ -62,9 +74,7 @@ def _create_contaminator(ngrams_file, mistake_probability):
 def _create_random_batch_generator():
     _library.create_random_batch_generator(ctypes.c_size_t(MESSAGE_SIZE))
 
-
 # Examples
-
 
 if __name__ == '__main__':
     assert levenstein('abcd', 'bcde') == 2

@@ -1,6 +1,7 @@
 #include "python-bindings.h"
 
 #include <cassert>
+#include <fstream>
 #include <memory>
 #include <sstream>
 
@@ -10,6 +11,7 @@
 #include "../dataset-generator/contaminator.h"
 #include "../dataset-generator/random-batch-generator.h"
 #include "../network-hypo-searcher/utils.h"
+#include "../prefix-tree/prefix-tree-builder.h"
 
 extern "C" {
 
@@ -17,6 +19,7 @@ std::string                           DATASET_FOLDER;
 std::unique_ptr<Contaminator>         CONTAMINATOR;
 std::unique_ptr<DataSet>              DATASET;
 std::unique_ptr<RandomBatchGenerator> BATCH_GENERATOR;
+std::unique_ptr<PrefixTreeBuilder>    PREFIX_TREE_BUILDER;
 
 void set_dataset_folder(const char* input_folder) {
     assert(DATASET_FOLDER.empty());
@@ -66,6 +69,20 @@ void generate_random_batch(int32_t* clean_batch, int32_t* contaminated_batch, si
 
 size_t levenstein(const char* first, const char* second, size_t message_size) {
     return levenstein_distance(first, second, message_size);
+}
+
+void create_prefix_tree_builder() {
+    PREFIX_TREE_BUILDER = boost::make_unique<PrefixTreeBuilder>();
+}
+
+void add_to_prefix_tree_builder(const char* message) {
+    PREFIX_TREE_BUILDER->add(message);
+}
+
+void finalize_prefix_tree_builder(const char* output_file) {
+    std::vector<char> content = PREFIX_TREE_BUILDER->to_string();
+    std::ofstream writer(output_file, std::ios::binary);
+    writer.write(content.data(), content.size());
 }
 
 } // extern "C"

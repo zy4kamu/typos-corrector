@@ -44,7 +44,7 @@ void check_accuracy() {
     NNetworkHypoSearcher::HypoSearcher searcher(input_folder + "parameters/");
 
     std::string real, contaminated;
-    size_t num_found = 0;
+    size_t num_found = 0
     for (size_t i = 0; i < 10000; ++i) {
         batch_generator.next(real, contaminated);
         searcher.initialize(contaminated);
@@ -66,9 +66,10 @@ void generate_country_dataset() {
     std::mt19937 generator(1);
     const std::string home = getenv("HOME");
     DataSet dataset(home + "/git-repos/typos-corrector/dataset/all");
-    Contaminator contaminator(home + "/git-repos/typos-corrector/dataset/all/ngrams", 0.2);
+    Contaminator contaminator(home + "/git-repos/typos-corrector/dataset/all/ngrams", 0.1);
     RandomBatchGenerator batch_generator(dataset, contaminator, MESSAGE_SIZE);
-    batch_generator.generate_country_dataset(home + "/git-repos/typos-corrector/country-dataset/dataset/", 1000, 1000);
+    batch_generator.generate_country_state_dataset(home + "/git-repos/typos-corrector/country-dataset/dataset/",
+        10000000, 1000000);
 }
 
 

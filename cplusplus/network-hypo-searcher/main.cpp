@@ -14,7 +14,7 @@ const std::string home = getenv("HOME");
 const std::string INPUT_FOLDER = home + "/git-repos/typos-corrector/";
 
 struct DataSetRequester : private DataSet, public IDataBaseRequester {
-    DataSetRequester(const std::string& input_folder): DataSet(input_folder, std::string::npos, false) {
+    DataSetRequester(const std::string& input_folder): DataSet(input_folder, false) {
     }
 
     bool is_one_entity_present_in_database(const std::string& token) const override {

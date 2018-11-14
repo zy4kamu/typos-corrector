@@ -18,7 +18,7 @@ RandomBatchGenerator::RandomBatchGenerator(const DataSet& dataset, const Contami
     , generator(1) {
 }
 
-std::vector<std::string> RandomBatchGenerator::generate_one_example(std::string* country) {
+std::vector<std::string> RandomBatchGenerator::generate_one_example(std::string* country, std::string* state) {
     while (true) {
         std::vector<const DataSet::Entity*> entities = dataset.get_random_item(generator);
         std::vector<std::string> components;
@@ -30,6 +30,14 @@ std::vector<std::string> RandomBatchGenerator::generate_one_example(std::string*
                     *country = entity->name;
                 }
                 if (country_distribution(generator) == 0) {
+                    components.push_back(entity->name);
+                }
+                break;
+            case 4:   // state
+                if (state != nullptr) {
+                    *state = entity->name;
+                }
+                if (state_distribution(generator) == 0) {
                     components.push_back(entity->name);
                 }
                 break;
@@ -57,7 +65,7 @@ std::vector<std::string> RandomBatchGenerator::generate_one_example(std::string*
                     components.push_back(entity->name);
                 }
                 break;
-            default: // 12, 13, 15
+            default: // 12, 13, 14, 15
                 if (unknown_distribution(generator) == 0) {
                     components.push_back(entity->name);
                 }
@@ -151,30 +159,32 @@ void RandomBatchGenerator::generate_random_batch(int32_t* clean_batch, int32_t* 
 std::vector<size_t> RandomBatchGenerator::get_vw_features(const std::string& message) const {
     std::vector<size_t> features;
     for (size_t length = 1; length <= message.size(); ++length) {
-        for (size_t i = 0; i + length < message.length(); ++i) {
+        for (size_t i = 0; i + length <= message.length(); ++i) {
             const std::string feature = message.substr(i, length);
             features.push_back(std::hash<std::string>{}(feature) % COUNTRY_SET_HASH_SIZE);
+            features.push_back(std::hash<std::string>{}(std::to_string(i) + "_" + feature) % COUNTRY_SET_HASH_SIZE);
         }
     }
     return features;
 }
 
-void RandomBatchGenerator::generate_country_dataset(const std::string& output_file, size_t size,
-                                                    std::map<std::string, size_t>& country_to_index) {
-    std::string country;
+void RandomBatchGenerator::generate_country_state_dataset(const std::string& output_file, size_t size,
+                                                          std::map<std::string, size_t>& country_state_to_index) {
+    std::string country, state;
     std::ofstream writer(output_file);
     for (size_t i = 0; i < size;) {
-        const std::vector<std::string> example = generate_one_example(&country);
-        if (country_to_index.find(country) == country_to_index.end()) {
-            size_t number_of_countries = country_to_index.size();
-            country_to_index[country] = 1 + number_of_countries;
+        const std::vector<std::string> example = generate_one_example(&country, &state);
+        const std::string country_state = country + "-" + state;
+        if (country_state_to_index.find(country_state) == country_state_to_index.end()) {
+            size_t number_of_county_states = country_state_to_index.size();
+            country_state_to_index[country_state] = 1 + number_of_county_states;
         }
         const std::string contaminated = contaminator.contaminate(example, message_size);
         if (contaminated.length() < 5) {
             continue;
         }
         std::vector<size_t> features = get_vw_features(contaminated);
-        writer << country_to_index[country] << " |";
+        writer << country_state_to_index[country_state] << " |";
         for (const size_t feature : features) {
             writer << " " << feature;
         }
@@ -183,10 +193,10 @@ void RandomBatchGenerator::generate_country_dataset(const std::string& output_fi
     }
 }
 
-void RandomBatchGenerator::generate_country_dataset(const std::string& output_folder, size_t train_size, size_t test_size) {
+void RandomBatchGenerator::generate_country_state_dataset(const std::string& output_folder, size_t train_size, size_t test_size) {
     std::map<std::string, size_t> country_to_index;
-    generate_country_dataset(output_folder + "train", train_size, country_to_index);
-    generate_country_dataset(output_folder + "test", test_size, country_to_index);
+    generate_country_state_dataset(output_folder + "train", train_size, country_to_index);
+    generate_country_state_dataset(output_folder + "test", test_size, country_to_index);
 
     std::vector<std::string> countries(country_to_index.size());
     for (const auto& kvp : country_to_index) {

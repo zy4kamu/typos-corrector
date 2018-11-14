@@ -20,9 +20,26 @@ int entity_type_to_int(const std::string& type) {
 
 } // anonymous namespace
 
-DataSet::DataSet(const std::string& input_folder, size_t split_index, bool use_transitions): house_numbers_distribution(1000000) {
+DataSet::DataSet(std::string country_folder, bool use_transitions): house_numbers_distribution(1000000) {
+    // preprocess input_folder; this is a hack to enable several states simultaneously;
+    // for example, united states of america/michigan,illinois,indiana
+    std::vector<std::string> state_folders;
+    size_t last_slash_index = country_folder.find_last_of('/');
+    if (last_slash_index != std::string::npos) {
+        std::string base_folder = country_folder.substr(0, last_slash_index);
+        state_folders = split(country_folder.substr(last_slash_index + 1), '^');
+        for (std::string& state_file : state_folders) {
+            state_file  = base_folder + "/" + state_file;
+            std::cout << "Dataset will read data from " << state_file << std::endl;
+        }
+        country_folder = state_folders[0];
+    } else {
+        state_folders.push_back(country_folder);
+        std::cout << "Dataset will read data from " << country_folder << std::endl;
+    }
+
     // read names file
-    std::ifstream names_reader(input_folder + "/names");
+    std::ifstream names_reader(country_folder + "/names");
     std::string line;
     while (getline(names_reader, line)) {
         std::vector<std::string> splitted = split(line, '|');
@@ -39,25 +56,26 @@ DataSet::DataSet(const std::string& input_folder, size_t split_index, bool use_t
     }
 
     // read transitions
-    const std::string transitions_file = (split_index == static_cast<size_t>(-1)) ? input_folder + "/data"
-                                                                                  : input_folder + "/split_" + std::to_string(split_index);
-    std::cout << "reading dataset from file: " << transitions_file << std::endl;
-    size_t counter = 0;
-    std::ifstream transitions_reader(transitions_file);
-    while (getline(transitions_reader, line)) {
-        Node* node = &root;
-        std::vector<std::string> splitted = split(line, ' ');
-        for (const std::string& index_string : splitted) {
-            size_t index = std::stoi(index_string);
-            if (index_to_name[index].type == 101) {
-                node->house_numbers.push_back(index);
-            } else {
-                node = node->add(index);
-            }
-        }
-        if (++counter % 100000 == 0) {
-            std::cout << "reading transitions: " << counter << std::endl;
-        }
+    for (const std::string& state_folder : state_folders) {
+      const std::string transitions_file = state_folder + "/data";
+      std::cout << "reading dataset from file: " << transitions_file << std::endl;
+      size_t counter = 0;
+      std::ifstream transitions_reader(transitions_file);
+      while (getline(transitions_reader, line)) {
+          Node* node = &root;
+          std::vector<std::string> splitted = split(line, ' ');
+          for (const std::string& index_string : splitted) {
+              size_t index = std::stoi(index_string);
+              if (index_to_name[index].type == 101) {
+                  node->house_numbers.push_back(index);
+              } else {
+                  node = node->add(index);
+              }
+          }
+          if (++counter % 100000 == 0) {
+              std::cout << state_folder << ": reading transitions: " << counter << std::endl;
+          }
+      }
     }
 
     // create transition distributions for each node

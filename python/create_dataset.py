@@ -2,6 +2,7 @@
 import os, unicodedata, shutil
 
 import utils
+import cpp_bindings
 
 
 input_file = os.path.join(os.environ['HOME'], 'git-repos/typos-corrector/dataset/preprocessed/data')
@@ -166,14 +167,15 @@ def create_ngrams():
     names_dict = {}
     with open(output_names_dict_file) as reader:
         for line in reader:
-            type, index, country = line.strip().split('|')
-            names_dict[index] = country
+            type, index, entity = line.strip().split('|')
+            names_dict[index] = entity
 
     ngram_size = 3
     spaces = (' ' * ngram_size)
     for country in os.listdir(by_country_state_folder):
         country_folder = os.path.join(by_country_state_folder, country)
-        for state in os.listdir(country_folder):
+        states = ['.'] if 'data' in os.listdir(country_folder) else os.listdir(country_folder)
+        for state in states:
             print 'working with', country, state
             country_state_folder = os.path.join(country_folder, state)
 
@@ -201,7 +203,8 @@ def create_ngrams():
 def create_names_symlinks():
     for country in os.listdir(by_country_state_folder):
         country_folder = os.path.join(by_country_state_folder, country)
-        for state in os.listdir(country_folder):
+        states = ['.'] if 'data' in os.listdir(country_folder) else os.listdir(country_folder)
+        for state in states:
             country_state_folder = os.path.join(country_folder, state)
             output_link = os.path.join(country_state_folder, "names")
             if os.path.exists(output_link):
@@ -212,7 +215,8 @@ def create_common_ngrams_file():
     ngrams = {}
     for country in os.listdir(by_country_state_folder):
         country_folder = os.path.join(by_country_state_folder, country)
-        for state in os.listdir(country_folder):
+        states = ['.'] if 'data' in os.listdir(country_folder) else os.listdir(country_folder)
+        for state in states:
             country_state_folder = os.path.join(country_folder, state)
             ngrams_file = os.path.join(country_state_folder, "ngrams")
             with open(ngrams_file) as reader:
@@ -228,6 +232,26 @@ def create_common_ngrams_file():
         for key, value in ngrams:
             writer.write('{}|{}\n'.format(key, value))
 
+def create_prefix_trees():
+    names_dict = {}
+    with open(output_names_dict_file) as reader:
+        for line in reader:
+            type, index, entity = line.strip().split('|')
+            names_dict[index] = entity
+
+    cpp_bindings.create_prefix_tree_builder()
+    for country in os.listdir(by_country_state_folder):
+        country_folder = os.path.join(by_country_state_folder, country)
+        states = ['.'] if 'data' in os.listdir(country_folder) else os.listdir(country_folder)
+        for state in states:
+            print 'working with', country, state
+            country_state_folder = os.path.join(country_folder, state)
+            with open(os.path.join(country_state_folder, 'data')) as reader:
+                for line in reader:
+                    for index in line.strip().split(' '):
+                        cpp_bindings.add_to_prefix_tree_builder(names_dict[index])
+            cpp_bindings.finalize_prefix_tree_builder(os.path.join(country_state_folder, 'prefix-tree'))
+
 if __name__ == '__main__':
     """
     print 'step 0: creating {} from {}'.format(input_file, output_folder)
@@ -236,11 +260,11 @@ if __name__ == '__main__':
     separate_by_country_state()
     print 'step 2: creating ngrams'
     create_ngrams()
-    """
-    print 'step3: creating symlinks for names'
+    print 'step 3: creating symlinks for names'
     create_names_symlinks()
-    """
-    print 'step4: creating common ngrams file'
+    print 'step 4: creating common ngrams file'
     create_common_ngrams_file()
     """
+    print 'step 5: create prefix tree'
+    create_prefix_trees()
 

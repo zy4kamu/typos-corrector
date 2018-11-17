@@ -9,6 +9,7 @@
 #include "common.h"
 #include "i-database-requester.h"
 #include "../dataset/dataset.h"
+#include "../prefix-tree/prefix-tree.h"
 
 #ifdef USE_OPENCL
     #include "network-automata-gpu.h"
@@ -48,6 +49,7 @@ public:
     const std::string& generate_next_hypo();
     bool check_hypo_in_database(IDataBaseRequester& requester, std::string& levenstein_correction);
     float_type get_probability_not_to_correct() const;
+    std::vector<std::string> cover_probability(float_type target_probability, size_t max_attempts, const PrefixTree& prefix_tree);
 private:
     void read_first_mistake_statistics(const std::string& first_mistake_file);
     void reset();

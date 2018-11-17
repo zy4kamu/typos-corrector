@@ -20,6 +20,9 @@ PrefixTreeNode::PrefixTreeNode(const char* data): data(data) {
 
 PrefixTreeNode PrefixTreeNode::move(char letter) {
     auto found = std::find(transitions.begin(), transitions.end(), letter);
+    if (found == transitions.end()) {
+        return PrefixTreeNode();
+    }
     size_t transition_index = std::distance(transitions.begin(), found);
     return PrefixTreeNode(data + *reinterpret_cast<const int32_t*>(data + 1 + transitions.size() + 4 * transition_index));
 }

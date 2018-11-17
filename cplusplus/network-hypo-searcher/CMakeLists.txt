@@ -20,10 +20,11 @@ if (USE_OPENCL)
                                              hypo-searcher.cpp
                                              multi-hypo-searcher.cpp
                                              network-automata-gpu.cpp
+                                             prefix-tree-hypo-searcher.cpp
                                              vw-model.cpp)
-    target_link_libraries(network-hypo-searcher opencl-connector)
+    target_link_libraries(network-hypo-searcher opencl-connector prefix-tree)
     add_executable(network-hypo-searcher-app main.cpp)
-    target_link_libraries(network-hypo-searcher-app network-hypo-searcher)
+    target_link_libraries(network-hypo-searcher-app network-hypo-searcher prefix-tree)
 else()
     add_library(network-hypo-searcher SHARED common.cpp
                                              compressed-lstm-cpu.cpp
@@ -31,9 +32,10 @@ else()
                                              hypo-searcher.cpp
                                              multi-hypo-searcher.cpp
                                              network-automata-cpu.cpp
+                                             prefix-tree-hypo-searcher.cpp
                                              utils.cpp
                                              vw-model.cpp)
-    target_link_libraries(network-hypo-searcher)
+    target_link_libraries(network-hypo-searcher prefix-tree)
     add_executable(network-hypo-searcher-app main.cpp)
-    target_link_libraries(network-hypo-searcher-app network-hypo-searcher dataset)
+    target_link_libraries(network-hypo-searcher-app network-hypo-searcher dataset prefix-tree)
 endif()

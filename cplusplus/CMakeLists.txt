@@ -29,10 +29,10 @@ endif ()
 
 ########################## LOAD PROJECTS #############################
 
+add_subdirectory(prefix-tree)
 add_subdirectory(dataset)
 add_subdirectory(network-hypo-searcher)
 add_subdirectory(dataset-generator)
-add_subdirectory(prefix-tree)
 
 if (BUILD_PYTHON_BINDINGS)
     add_subdirectory(python-bindings)

@@ -1,4 +1,5 @@
 #include "multi-hypo-searcher.h"
+#include "prefix-tree-hypo-searcher.h"
 
 #include <chrono>
 #include <cstdlib>
@@ -37,6 +38,13 @@ double elapsed_time(std::chrono::time_point<std::chrono::steady_clock> start,
 }
 
 } // anonymous namespace
+
+void test_prefix_tree_hypo_searcher(const std::string& country) {
+    PrefixTreeHypoSearcher searcher(INPUT_FOLDER + "python/models/binaries/" + country,
+                                    INPUT_FOLDER + "dataset/by-country/" + country + "/prefix-tree");
+    searcher.load();
+    searcher.process("masterdam", 0.99);
+}
 
 void test_hypo_searcher(const std::string& country) {
     auto start = std::chrono::steady_clock::now();
@@ -109,6 +117,7 @@ void test_multi_hypo_searcher() {
 }
 
 int main(int argc, char* argv[]) {
+    test_prefix_tree_hypo_searcher("the netherlands");
     // test_hypo_searcher("the netherlands");
-    test_multi_hypo_searcher();
+    // test_multi_hypo_searcher();
 }

@@ -47,8 +47,7 @@ void test_prefix_tree_hypo_searcher(const std::string& country) {
     while (true) {
         std::cout << "Input something: ";
         std::getline(std::cin, input);
-        searcher.initialize(input);
-        std::vector<std::string> hypos = searcher.cover_probability(0.99, 10, prefix_tree);
+        std::vector<std::string> hypos = searcher.cover_probability(input, 0.99, 10, prefix_tree);
         for (const std::string& hypo : hypos) {
             std::cout << hypo << std::endl;
         }

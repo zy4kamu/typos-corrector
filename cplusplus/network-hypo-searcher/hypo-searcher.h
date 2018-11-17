@@ -23,14 +23,18 @@ namespace NNetworkHypoSearcher {
 
 struct HypoNode {
     HypoNode() = default;
-    HypoNode(char letter, float_type logit, std::string&& prefix)
-        : letter(letter), logit(logit), prefix(std::move(prefix)) {
+    HypoNode(const HypoNode* parent, float_type logit, std::string&& prefix, const PrefixTreeState* _prefix_tree_state)
+        : parent(parent), logit(logit), prefix(std::move(prefix)) {
+        if (_prefix_tree_state != nullptr) {
+            prefix_tree_state = *_prefix_tree_state;
+        }
     }
 
-    char letter;
+    const HypoNode* parent;
     float_type logit;
-    std::string prefix; // TODO: replace with NN state
+    std::string prefix;
     std::vector<HypoNode> transitions;
+    PrefixTreeState prefix_tree_state;
 };
 
 struct HypoNodePointerComparator {
@@ -42,6 +46,8 @@ using AutomataNodesSet = std::set<HypoNode*, HypoNodePointerComparator>;
 class HypoSearcher {
 public:
     HypoSearcher(const std::string& lstm_folder);
+    std::vector<std::string> cover_probability(const std::string& input, float_type target_probability,
+                                               size_t max_attempts, PrefixTree& prefix_tree);
     void load();
     void unload();
     bool is_loaded() const;
@@ -49,10 +55,8 @@ public:
     const std::string& generate_next_hypo();
     bool check_hypo_in_database(IDataBaseRequester& requester, std::string& levenstein_correction);
     float_type get_probability_not_to_correct() const;
-    std::vector<std::string> cover_probability(float_type target_probability, size_t max_attempts, PrefixTree& prefix_tree);
 private:
     void read_first_mistake_statistics(const std::string& first_mistake_file);
-    void reset();
 
     std::string             lstm_folder;
     NetworkAutomata         automata;

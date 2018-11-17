@@ -20,7 +20,6 @@ if (USE_OPENCL)
                                              hypo-searcher.cpp
                                              multi-hypo-searcher.cpp
                                              network-automata-gpu.cpp
-                                             prefix-tree-hypo-searcher.cpp
                                              vw-model.cpp)
     target_link_libraries(network-hypo-searcher opencl-connector prefix-tree)
     add_executable(network-hypo-searcher-app main.cpp)
@@ -32,7 +31,6 @@ else()
                                              hypo-searcher.cpp
                                              multi-hypo-searcher.cpp
                                              network-automata-cpu.cpp
-                                             prefix-tree-hypo-searcher.cpp
                                              utils.cpp
                                              vw-model.cpp)
     target_link_libraries(network-hypo-searcher prefix-tree)

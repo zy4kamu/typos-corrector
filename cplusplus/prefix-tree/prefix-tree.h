@@ -1,27 +1,23 @@
 #pragma once
 
+#include <bitset>
 #include <string>
 #include <vector>
-
-struct PrefixTreeNode {
-    PrefixTreeNode(const char* data = nullptr);
-    std::vector<char> transitions;
-    PrefixTreeNode move(char letter);
-    const char* data;
-};
 
 class PrefixTree {
 public:
     PrefixTree(const std::string& filename);
-    const char* get_root() const { return root.data; }
     ~PrefixTree();
+    const std::vector<char>& get_transitions() const;
+    void reset_pass();
+    void move(char letter);
     bool check(const std::string& message);
-    bool get(const std::string& message, size_t limit, std::vector<std::string>& pretendents);
- private:
-    const char* forward(const std::string& message) const;
-    bool walk(const char* pointer, const std::string& prefix, size_t limit, std::vector<std::string>& pretendents);
-
+private:
+    void reset_pass(const char* pointer);
     int file_desrciptor;
     size_t file_size;
-    PrefixTreeNode root;
+    const char* root;
+
+    const char* current_pointer;
+    std::vector<char> transitions;
 };

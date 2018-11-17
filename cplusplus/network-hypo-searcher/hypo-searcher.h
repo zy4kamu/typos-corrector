@@ -35,6 +35,7 @@ struct HypoNode {
     std::string prefix;
     std::vector<HypoNode> transitions;
     PrefixTreeState prefix_tree_state;
+    CompressedLSTMCellCPU::InternalState network_state;
 };
 
 struct HypoNodePointerComparator {

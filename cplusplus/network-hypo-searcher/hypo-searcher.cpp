@@ -78,6 +78,7 @@ std::vector<std::string> HypoSearcher::cover_probability(const std::string& inpu
     nodes_to_process.clear();
     nodes_to_process.insert(&root);
     automata.encode_message(input, current_probabilities);
+    root.network_state = automata.get_internal_state();
     float_type covered_probability = 0;
     std::vector<std::string> hypos;
     size_t counter = 0;
@@ -86,11 +87,10 @@ std::vector<std::string> HypoSearcher::cover_probability(const std::string& inpu
       // Take the best hypo and get to the state from where we can start searching hypos
       automata.reset_pass();
       HypoNode* current_node = *nodes_to_process.begin();
-      for (const char letter : current_node->prefix) {
-          automata.apply(letter, current_probabilities);
-      }
       if (current_node->parent != nullptr) {
           current_node->prefix_tree_state = prefix_tree.move(current_node->parent->prefix_tree_state, current_node->prefix.back());
+          automata.set_internal_state(current_node->parent->network_state);
+          automata.apply(current_node->prefix.back(), current_probabilities);
       }
       current_hypo = current_node->prefix;
       nodes_to_process.erase(nodes_to_process.begin());
@@ -142,6 +142,7 @@ std::vector<std::string> HypoSearcher::cover_probability(const std::string& inpu
               }
               current_node = &current_node->transitions[best_transition_index];
               automata.apply(ch, current_probabilities);
+              current_node->network_state = automata.get_internal_state();
               current_node->prefix_tree_state = prefix_tree.move(current_node->parent->prefix_tree_state, ch);
           }
       }

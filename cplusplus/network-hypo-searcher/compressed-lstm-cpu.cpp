@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cmath>
 #include <fstream>
+#include <tuple>
+
 #include "utils.h"
 
 namespace NNetworkHypoSearcher {
@@ -128,6 +130,14 @@ void CompressedLSTMCellCPU::store_current_hypo_pass() {
 void CompressedLSTMCellCPU::restore_current_hypo_pass() {
     memcpy(state_buffer.data(), stored_state_buffer.data(), lstm_size * sizeof(float_type));
     memcpy(hidden_buffer, stored_hidden_buffer.data(), lstm_size * sizeof(float_type));
+}
+
+CompressedLSTMCellCPU::InternalState CompressedLSTMCellCPU::get_internal_state() const {
+    return std::make_pair(state_buffer, ijfo_buffer);
+}
+
+void CompressedLSTMCellCPU::set_internal_state(const InternalState& state) {
+    std::tie(state_buffer, ijfo_buffer) = state;
 }
 
 } // namespace NNetworkHypoSearcher

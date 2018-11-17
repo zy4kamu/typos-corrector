@@ -16,6 +16,8 @@ public:
     bool is_loaded() const;
     void reset_pass();
     void apply(char letter, std::vector<float_type>& next_letter_logits);
+    CompressedLSTMCellCPU::InternalState get_internal_state() const;
+    void set_internal_state(const CompressedLSTMCellCPU::InternalState& state);
 private:
     void get_output(std::vector<float_type>& output);
 

@@ -8,8 +8,10 @@
 
 namespace NNetworkHypoSearcher {
 
+
 class CompressedLSTMCellCPU {
 public:
+    using InternalState = std::pair<std::vector<float_type>, std::vector<float_type>>;
     CompressedLSTMCellCPU(const std::string& input_folder, const std::vector<std::string>& models);
     void load();
     void unload();
@@ -21,6 +23,8 @@ public:
     void make_all_buffers_zero();
     void store_current_hypo_pass();
     void restore_current_hypo_pass();
+    InternalState get_internal_state() const;
+    void set_internal_state(const InternalState& state);
 private:
     void calculate_ijfo(int_type one_hot_index, size_t model_index);
 

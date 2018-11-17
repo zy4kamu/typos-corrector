@@ -52,6 +52,14 @@ void NetworkAutomataCPU::apply(char letter, std::vector<float_type>& next_letter
     get_output(next_letter_logits);
 }
 
+CompressedLSTMCellCPU::InternalState NetworkAutomataCPU::get_internal_state() const {
+    return lstm.get_internal_state();
+}
+
+void NetworkAutomataCPU::set_internal_state(const CompressedLSTMCellCPU::InternalState& state) {
+    lstm.set_internal_state(state);
+}
+
 void NetworkAutomataCPU::get_output(std::vector<float_type>& output) {
     // linear transform of lstm output
     vector_matrix_multiply(lstm.get_output(), hidden_layer_weights.data(), lstm.get_output_size(), NUM_LETTERS,

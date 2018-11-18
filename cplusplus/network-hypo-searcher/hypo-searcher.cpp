@@ -63,59 +63,55 @@ bool HypoSearcher::is_loaded() const {
 void HypoSearcher::initialize(const std::string& input) {
     initial_input = input.substr(0, std::min(input.length(), MESSAGE_SIZE));
     max_prefix_length = std::string::npos;
-    root = { nullptr, first_mistake_statistics[0], "", nullptr };
+    root = { nullptr, first_mistake_statistics[0], "" };
     nodes_to_process.clear();
     nodes_to_process.insert(&root);
     automata.encode_message(input, current_probabilities);
 }
 
 std::vector<std::string> HypoSearcher::cover_probability(const std::string& input, float_type target_probability,
-                                                         size_t max_attempts, PrefixTree& prefix_tree) {
+                                                         size_t max_attempts, PrefixTreeMaster& prefix_tree) {
     // initialize
-    prefix_tree.reset_pass();
     initial_input = input.substr(0, std::min(input.length(), MESSAGE_SIZE));
-    root = { nullptr, first_mistake_statistics[0], "", &prefix_tree.get_state() };
+    root = { nullptr, first_mistake_statistics[0], "" };
     nodes_to_process.clear();
     nodes_to_process.insert(&root);
     automata.encode_message(input, current_probabilities);
     root.network_state = automata.get_internal_state();
+    root.prefix_tree_state = prefix_tree.get_initial_state();
     float_type covered_probability = 0;
     std::vector<std::string> hypos;
     size_t counter = 0;
 
     while (covered_probability < target_probability && counter++ < max_attempts) {
-      // Take the best hypo and get to the state from where we can start searching hypos
-      automata.reset_pass();
+      // prepare current node: prefix tree state + network state
       HypoNode* current_node = *nodes_to_process.begin();
-      if (current_node->parent != nullptr) {
-          current_node->prefix_tree_state = prefix_tree.move(current_node->parent->prefix_tree_state, current_node->prefix.back());
-          automata.set_internal_state(current_node->parent->network_state);
-          automata.apply(current_node->prefix.back(), current_probabilities);
+      const HypoNode* parent = current_node->parent;
+      if (parent != nullptr) {
+          char transition_letter = current_node->prefix.back();
+          automata.set_internal_state(parent->network_state);
+          automata.apply(transition_letter, current_probabilities);
+          current_node->network_state = automata.get_internal_state();
+          current_node->prefix_tree_state = transition_letter == '|' ? prefix_tree.get_initial_state() : parent->prefix_tree_state.move(transition_letter);
       }
       current_hypo = current_node->prefix;
       nodes_to_process.erase(nodes_to_process.begin());
 
       for (size_t i = current_hypo.length(); i < MESSAGE_SIZE; ++i) {
 
-          // check if reached the end
-          if (current_node->prefix_tree_state.transitions.empty()) {
-              covered_probability += std::exp(current_node->logit - first_mistake_statistics[i]);
-              hypos.push_back(current_hypo.substr(0, current_hypo.find_last_not_of(' ') + 1));
-              break;
-          }
-
           // create bitset for allowed transitions
           std::bitset<64> transition_bitset;
-          for (char letter : current_node->prefix_tree_state.transitions) {
+          for (char letter : current_node->prefix_tree_state.get_transitions()) {
               transition_bitset.set(to_int(letter));
           }
+          transition_bitset.set(SEPARATOR_INT);
 
           // update automata nodes
           size_t best_transition_index = std::string::npos;
           float_type best_transition_probability = 0;
           for (size_t j = 0; j < EFFECTIVE_NUM_LETTERS; ++j) {
               char letter_to_add = to_char(static_cast<int32_t>(j));
-              bool allowed_transition = letter_to_add == ' ' || transition_bitset.test(to_int(letter_to_add));
+              bool allowed_transition = transition_bitset.test(to_int(letter_to_add)) || letter_to_add == ' ';
               if (allowed_transition) {
                 if (current_probabilities[j] > best_transition_probability) {
                     best_transition_probability = current_probabilities[j];
@@ -123,9 +119,9 @@ std::vector<std::string> HypoSearcher::cover_probability(const std::string& inpu
                 }
                 float_type logit = current_node->logit + std::log(current_probabilities[j]) + first_mistake_statistics[i + 1] -
                         first_mistake_statistics[i];
-                current_node->transitions.emplace_back(current_node, logit, current_hypo + letter_to_add, nullptr);
+                current_node->transitions.emplace_back(current_node, logit, current_hypo + letter_to_add);
               } else {
-                  current_node->transitions.emplace_back(current_node, std::numeric_limits<float_type>::min(), current_hypo + letter_to_add, nullptr);
+                  current_node->transitions.emplace_back(current_node, std::numeric_limits<float_type>::min(), current_hypo + letter_to_add);
                   covered_probability += current_probabilities[j] * std::exp(current_node->logit - first_mistake_statistics[i]);
               }
           }
@@ -133,19 +129,27 @@ std::vector<std::string> HypoSearcher::cover_probability(const std::string& inpu
           // choose next best char
           if (i + 1 < MESSAGE_SIZE) {
               char ch = to_char(static_cast<int32_t>(best_transition_index));
-              current_hypo += ch;
-              for (char transition_char : current_node->prefix_tree_state.transitions) {
-                  uint32_t transition_index = to_int(transition_char);
-                  if (transition_index != best_transition_index) {
-                      nodes_to_process.insert(&current_node->transitions[transition_index]);
-                  }
+              // check if terminal state is requested
+              if (static_cast<int32_t>(best_transition_index) == SPACE_INT && !transition_bitset.test(SPACE_INT)) {
+                  break;
+              } else {
+                current_hypo += ch;
+                for (char transition_char : current_node->prefix_tree_state.get_transitions()) {
+                    uint32_t transition_index = to_int(transition_char);
+                    if (transition_index != best_transition_index) {
+                        nodes_to_process.insert(&current_node->transitions[transition_index]);
+                    }
+                }
+                current_node = &current_node->transitions[best_transition_index];
+                automata.apply(ch, current_probabilities);
+                current_node->network_state = automata.get_internal_state();
+                current_node->prefix_tree_state = ch == '|' ? prefix_tree.get_initial_state() : current_node->parent->prefix_tree_state.move(ch);
               }
-              current_node = &current_node->transitions[best_transition_index];
-              automata.apply(ch, current_probabilities);
-              current_node->network_state = automata.get_internal_state();
-              current_node->prefix_tree_state = prefix_tree.move(current_node->parent->prefix_tree_state, ch);
           }
       }
+
+      covered_probability += std::exp(current_node->logit - first_mistake_statistics[current_hypo.length()]);
+      hypos.push_back(current_hypo.substr(0, current_hypo.find_last_not_of(' ') + 1));
     }
     return hypos;
 }
@@ -176,7 +180,7 @@ const std::string& HypoSearcher::generate_next_hypo() {
             char letter_to_add = to_char(static_cast<int32_t>(j));
             float_type logit = current_node->logit + std::log(current_probabilities[j]) + first_mistake_statistics[i + 1] -
                     first_mistake_statistics[i];
-            current_node->transitions.emplace_back(current_node, logit, current_hypo + letter_to_add, nullptr);
+            current_node->transitions.emplace_back(current_node, logit, current_hypo + letter_to_add);
         }
 
         // choose next best char

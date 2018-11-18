@@ -133,11 +133,14 @@ void CompressedLSTMCellCPU::restore_current_hypo_pass() {
 }
 
 CompressedLSTMCellCPU::InternalState CompressedLSTMCellCPU::get_internal_state() const {
-    return std::make_pair(state_buffer, ijfo_buffer);
+    std::vector<float_type> hidden_buffer_copy(lstm_size);
+    memcpy(hidden_buffer_copy.data(), hidden_buffer, lstm_size * sizeof(float_type));
+    return std::make_pair(state_buffer, std::move(hidden_buffer_copy));
 }
 
 void CompressedLSTMCellCPU::set_internal_state(const InternalState& state) {
-    std::tie(state_buffer, ijfo_buffer) = state;
+    memcpy(state_buffer.data(), state.first.data(), lstm_size * sizeof(float_type));
+    memcpy(hidden_buffer, state.second.data(), lstm_size * sizeof(float_type));
 }
 
 } // namespace NNetworkHypoSearcher

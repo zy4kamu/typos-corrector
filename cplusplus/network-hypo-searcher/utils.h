@@ -5,7 +5,9 @@
 
 extern const int32_t A_INT;
 extern const int32_t Z_INT;
-extern const size_t EFFECTIVE_NUM_LETTERS;
+extern const int32_t SPACE_INT;
+extern const int32_t SEPARATOR_INT;
+extern const size_t  EFFECTIVE_NUM_LETTERS;
 extern const size_t  NUM_LETTERS;
 
 bool acceptable(char ch);

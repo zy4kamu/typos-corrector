@@ -39,7 +39,7 @@ double elapsed_time(std::chrono::time_point<std::chrono::steady_clock> start,
 } // anonymous namespace
 
 void test_prefix_tree_hypo_searcher(const std::string& country) {
-    PrefixTree prefix_tree(INPUT_FOLDER + "dataset/by-country/" + country + "/prefix-tree");
+    PrefixTreeMaster prefix_tree(INPUT_FOLDER + "dataset/by-country/" + country + "/prefix-tree");
     HypoSearcher searcher(INPUT_FOLDER + "python/models/binaries/" + country);
     searcher.load();
 
@@ -47,7 +47,7 @@ void test_prefix_tree_hypo_searcher(const std::string& country) {
     while (true) {
         std::cout << "Input something: ";
         std::getline(std::cin, input);
-        std::vector<std::string> hypos = searcher.cover_probability(input, 0.99, 10, prefix_tree);
+        std::vector<std::string> hypos = searcher.cover_probability(input, 0.99, 15, prefix_tree);
         for (const std::string& hypo : hypos) {
             std::cout << hypo << std::endl;
         }
@@ -125,7 +125,7 @@ void test_multi_hypo_searcher() {
 }
 
 int main(int argc, char* argv[]) {
-    test_prefix_tree_hypo_searcher("the netherlands");
-    // test_hypo_searcher("the netherlands");
+    test_prefix_tree_hypo_searcher("denmark");
+    // test_hypo_searcher("france");
     // test_multi_hypo_searcher();
 }

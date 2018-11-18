@@ -23,11 +23,8 @@ namespace NNetworkHypoSearcher {
 
 struct HypoNode {
     HypoNode() = default;
-    HypoNode(const HypoNode* parent, float_type logit, std::string&& prefix, const PrefixTreeState* _prefix_tree_state)
+    HypoNode(const HypoNode* parent, float_type logit, std::string&& prefix)
         : parent(parent), logit(logit), prefix(std::move(prefix)) {
-        if (_prefix_tree_state != nullptr) {
-            prefix_tree_state = *_prefix_tree_state;
-        }
     }
 
     const HypoNode* parent;
@@ -48,7 +45,7 @@ class HypoSearcher {
 public:
     HypoSearcher(const std::string& lstm_folder);
     std::vector<std::string> cover_probability(const std::string& input, float_type target_probability,
-                                               size_t max_attempts, PrefixTree& prefix_tree);
+                                               size_t max_attempts, PrefixTreeMaster& prefix_tree);
     void load();
     void unload();
     bool is_loaded() const;

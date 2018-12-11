@@ -39,7 +39,7 @@ double elapsed_time(std::chrono::time_point<std::chrono::steady_clock> start,
 } // anonymous namespace
 
 void test_prefix_tree_hypo_searcher(const std::string& country) {
-    PrefixTreeMaster prefix_tree(INPUT_FOLDER + "dataset/by-country/" + country + "/prefix-tree");
+    PrefixTreeMaster prefix_tree(INPUT_FOLDER + "dataset/by-country/" + country + "/none-state/prefix-tree");
     HypoSearcher searcher(INPUT_FOLDER + "python/models/binaries/" + country);
     searcher.load();
 

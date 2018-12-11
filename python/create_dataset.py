@@ -127,7 +127,7 @@ def create_all_dataset_folder():
     os.system('sort -n {} | uniq > tmp'.format(output_transitions_file))
     os.system('mv tmp {}'.format(output_transitions_file))
 
-def separate_by_country_state():
+def separate_by_country_state(group_dict):
     if os.path.exists(by_country_state_folder):
         shutil.rmtree(by_country_state_folder)
     os.mkdir(by_country_state_folder)
@@ -138,7 +138,7 @@ def separate_by_country_state():
         for line in reader:
             type, index, country_state = line.strip().split('|')
             if type != '3' and type != '4': break
-            index_to_country_state[index] = (type, country_state)
+            index_to_country_state[index] = (type, groups_dict.get(country_state, country_state))
 
     # iterate over file
     writers = {}
@@ -256,15 +256,38 @@ if __name__ == '__main__':
     """
     print 'step 0: creating {} from {}'.format(input_file, output_folder)
     create_all_dataset_folder()
+    """
     print 'step 1: separate {} to {}'.format(output_folder, by_country_state_folder)
-    separate_by_country_state()
+    groups_dict = {"romania/data":"others",
+                   "czech republic":"others",
+                   "slovakia":"others",
+                   "lithuania":"others",
+                   "russia":"others",
+                   "slovenia":"others",
+                   "croatia":"others",
+                   "latvia":"others",
+                   "estonia":"others",
+                   "luxembourg":"others",
+                   "iceland":"others",
+                   "greece":"others",
+                   "ukraine":"others",
+                   "bulgaria":"others",
+                   "serbia":"others",
+                   "cyprus":"others",
+                   "san marino":"others",
+                   "andorra":"others",
+                   "liechtenstein":"others",
+                   "montenegro":"others",
+                   "monaco":"others",
+                   "gibraltar":"others"}
+    separate_by_country_state(groups_dict)
     print 'step 2: creating ngrams'
     create_ngrams()
     print 'step 3: creating symlinks for names'
     create_names_symlinks()
     print 'step 4: creating common ngrams file'
     create_common_ngrams_file()
-    """
     print 'step 5: create prefix tree'
     create_prefix_trees()
+
 

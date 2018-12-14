@@ -239,24 +239,33 @@ def create_prefix_trees():
             type, index, entity = line.strip().split('|')
             names_dict[index] = entity
 
-    cpp_bindings.create_prefix_tree_builder()
     for country in os.listdir(by_country_state_folder):
         country_folder = os.path.join(by_country_state_folder, country)
         states = ['.'] if 'data' in os.listdir(country_folder) else os.listdir(country_folder)
         for state in states:
+            cpp_bindings.create_prefix_tree_builder()
             print 'working with', country, state
             country_state_folder = os.path.join(country_folder, state)
             with open(os.path.join(country_state_folder, 'data')) as reader:
                 for line in reader:
-                    for index in line.strip().split(' '):
-                        cpp_bindings.add_to_prefix_tree_builder(names_dict[index])
+                    names = [names_dict[_] for _ in line.strip().split(' ')]
+                    for name in names:
+                        cpp_bindings.add_to_prefix_tree_builder(name)
+                    for first in names:
+                        for second in names:
+                            if first != second:
+                                hash1 = chr((hash(first) % 65536) / 256)
+                                hash2 = chr(hash(first) % 256)
+                                cpp_bindings.add_to_prefix_tree_builder(hash1 + hash2 + second)
+
+                    # for index in line.strip().split(' '):
+                    #     cpp_bindings.add_to_prefix_tree_builder(names_dict[index])
             cpp_bindings.finalize_prefix_tree_builder(os.path.join(country_state_folder, 'prefix-tree'))
 
 if __name__ == '__main__':
     """
     print 'step 0: creating {} from {}'.format(input_file, output_folder)
     create_all_dataset_folder()
-    """
     print 'step 1: separate {} to {}'.format(output_folder, by_country_state_folder)
     groups_dict = {"romania/data":"others",
                    "czech republic":"others",
@@ -287,6 +296,7 @@ if __name__ == '__main__':
     create_names_symlinks()
     print 'step 4: creating common ngrams file'
     create_common_ngrams_file()
+    """
     print 'step 5: create prefix tree'
     create_prefix_trees()
 
